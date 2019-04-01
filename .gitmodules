@@ -1,0 +1,3 @@
+[submodule "vendor/EasyCL"]
+	path = vendor/EasyCL
+	url = https://github.com/architector1324/EasyCL
