@@ -60,14 +60,13 @@ TARGET_LINK_LIBRARIES(MatrixCF INTERFACE json::json)
 # Build Examples #
 ##################
 IF(MATRIXCF_BUILD_EXAMPLES)
-    # Copy kernel from source to build directory
     CONFIGURE_FILE(matrix.cl examples/matrix.cl COPYONLY)
     MACRO(matrixcf_add_example EXAMPLENAME)
         ADD_EXECUTABLE(${EXAMPLENAME} ${ARGN})
         TARGET_LINK_LIBRARIES(${EXAMPLENAME} PRIVATE MatrixCF::MatrixCF)
         SET_TARGET_PROPERTIES(${EXAMPLENAME} PROPERTIES FOLDER examples)
     ENDMACRO()
-    ADD_SUBDIRECTORY(examples) # Visit examples/CMakeLists.txt
+    ADD_SUBDIRECTORY(examples)
 ENDIF()
 
 ###############
@@ -79,12 +78,10 @@ IF(MATRIXCF_BUILD_TESTS)
     ##############
     ADD_LIBRARY(Catch2 INTERFACE)
     ADD_LIBRARY(Catch2::Catch2 ALIAS Catch2)
-    TARGET_INCLUDE_DIRECTORIES(Catch2 INTERFACE vendor/Catch2/include/)
+    TARGET_INCLUDE_DIRECTORIES(Catch2 INTERFACE vendor/Catch2/include)
     enable_testing()
 
-    # Copy kernel from source to build directory
     CONFIGURE_FILE(matrix.cl tests/matrix.cl COPYONLY)
-
     MACRO(matrixcf_add_test TESTNAME)
         ADD_EXECUTABLE(${TESTNAME} ${ARGN})
         TARGET_LINK_LIBRARIES(${TESTNAME} PRIVATE Catch2::Catch2)
@@ -92,5 +89,5 @@ IF(MATRIXCF_BUILD_TESTS)
         SET_TARGET_PROPERTIES(${TESTNAME} PROPERTIES FOLDER tests)
         ADD_TEST(NAME ${TESTNAME} COMMAND ${TESTNAME})
     ENDMACRO()
-    ADD_SUBDIRECTORY(tests) # Visit tests/CMakeLists.txt
+    ADD_SUBDIRECTORY(tests)
 ENDIF()
