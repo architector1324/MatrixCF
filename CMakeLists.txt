@@ -13,6 +13,11 @@ OPTION(MATRIXCF_BUILD_TESTS OFF)
 ###############
 FIND_PACKAGE(OpenCL REQUIRED)
 
+###############
+# Find OpenMP #
+###############
+FIND_PACKAGE(OpenMP REQUIRED)
+
 ############################
 # Download Latest json.hpp #
 ############################
@@ -46,13 +51,15 @@ ADD_LIBRARY(MatrixCF INTERFACE)
 ADD_LIBRARY(MatrixCF::MatrixCF ALIAS MatrixCF)
 TARGET_INCLUDE_DIRECTORIES(MatrixCF INTERFACE include)
 
-##############################
-#      Dependency Table      #
-#                            #
-# EasyCL   <-- OpenCL        #
-# MatrixCF <-- EasyCL + json #
-##############################
+#######################################
+#      Dependency Table               #
+#                                     #
+# EasyCL   <-- OpenCL                 #
+# MatrixCF <-- OpenMP + EasyCL + json #
+#######################################
+
 TARGET_LINK_LIBRARIES(EasyCL INTERFACE OpenCL::OpenCL)
+TARGET_LINK_LIBRARIES(MatrixCF INTERFACE OpenMP::OpenMP_CXX)
 TARGET_LINK_LIBRARIES(MatrixCF INTERFACE EasyCL::EasyCL)
 TARGET_LINK_LIBRARIES(MatrixCF INTERFACE json::json)
 
