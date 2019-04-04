@@ -37,6 +37,8 @@ namespace mcf{
         void setE(const T&, size_t, size_t);
 
         T* operator[](size_t);
+        operator T*();
+        operator const T*() const;
 
         void send(Computer&);
         void receive(Computer&);
@@ -177,6 +179,15 @@ void mcf::Mat<T>::setE(const T& value, size_t i, size_t j){
 template<typename T>
 T* mcf::Mat<T>::operator[](size_t i){
     return array + i;
+}
+
+template<typename T>
+mcf::Mat<T>::operator T*(){
+    return array;
+}
+template<typename T>
+mcf::Mat<T>::operator const T*() const{
+    return array;
 }
 
 template<typename T>
