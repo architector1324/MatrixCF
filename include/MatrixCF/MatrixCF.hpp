@@ -6,7 +6,7 @@
 
 namespace mcf{
     using namespace ecl;
-    static Program methods = Program::loadProgram("matrix.cl");
+    static Program methods = Program::load("matrix.cl");
 
     template<typename T>
     class Mat{
