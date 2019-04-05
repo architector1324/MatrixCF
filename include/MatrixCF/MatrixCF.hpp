@@ -17,6 +17,7 @@ namespace mcf{
         void clearFields();
         std::string getTypeName() const;
         void requireMatrixShape(const Mat<T>&, size_t, size_t, const std::string&, bool is_result = false) const;
+        void requireTotalSize(const Mat<T>&, size_t, const std::string&) const;
     public:
         Mat();
         Mat(size_t, size_t);
@@ -54,6 +55,10 @@ namespace mcf{
         friend Computer& operator<<(Computer&, Mat<U>&);
         template<typename U>
         friend Computer& operator>>(Computer&, Mat<U>&);
+
+        // methods (extra)
+        void reshape(size_t, size_t);
+        void ravel(bool is_column = false);
 
         // methods (mutable)
         void gen(const std::function<T(size_t, size_t)>&);
@@ -130,6 +135,17 @@ void mcf::Mat<T>::requireMatrixShape(const Mat<T>& X, size_t require_h, size_t r
         e += " != ";
         e += std::to_string(require_h) + "x" + std::to_string(require_w);
 
+        throw std::runtime_error(e);
+    }
+}
+template<typename T>
+void mcf::Mat<T>::requireTotalSize(const Mat<T>& X, size_t require_total_size, const std::string& where) const{
+    size_t r_total_size = X.getTotalSize();
+
+    if(r_total_size != require_total_size){
+        std::string e = "Require total size [" + where + "]: ";
+        e += "wrong matrix total size ";
+        e += std::to_string(r_total_size) + " != " + std::to_string(require_total_size);
         throw std::runtime_error(e);
     }
 }
@@ -296,6 +312,19 @@ namespace mcf{
         other.receive(video);
         return video;
     }
+}
+
+// methods (extra)
+template<typename T>
+void mcf::Mat<T>::reshape(size_t new_h, size_t new_w){
+    requireTotalSize(*this, new_h * new_w, "reshape");
+    h = new_h;
+    w = new_w;
+}
+template<typename T>
+void mcf::Mat<T>::ravel(bool is_column){
+    if(is_column) reshape(total_size, 1);
+    else reshape(1, total_size);
 }
 
 // methods (mutable)
