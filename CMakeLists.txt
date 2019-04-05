@@ -68,7 +68,6 @@ TARGET_LINK_LIBRARIES(MatrixCF INTERFACE json::json)
 # Build Examples #
 ##################
 IF(MATRIXCF_BUILD_EXAMPLES)
-    CONFIGURE_FILE(matrix.cl examples/matrix.cl COPYONLY)
     MACRO(matrixcf_add_example EXAMPLENAME)
         ADD_EXECUTABLE(${EXAMPLENAME} ${ARGN})
         TARGET_LINK_LIBRARIES(${EXAMPLENAME} PRIVATE MatrixCF::MatrixCF)
@@ -89,7 +88,6 @@ IF(MATRIXCF_BUILD_TESTS)
     TARGET_INCLUDE_DIRECTORIES(Catch2 INTERFACE vendor/Catch2/include)
     enable_testing()
 
-    CONFIGURE_FILE(matrix.cl tests/matrix.cl COPYONLY)
     MACRO(matrixcf_add_test TESTNAME)
         ADD_EXECUTABLE(${TESTNAME} ${ARGN})
         TARGET_LINK_LIBRARIES(${TESTNAME} PRIVATE Catch2::Catch2)

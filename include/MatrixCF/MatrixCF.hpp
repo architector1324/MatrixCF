@@ -6,7 +6,6 @@
 
 namespace mcf{
     using namespace ecl;
-    static Program methods = Program::load("matrix.cl");
 
     template<typename T>
     class Mat{
@@ -60,12 +59,30 @@ namespace mcf{
         void gen(const std::function<T(size_t, size_t)>&);
         void gen(const std::string&, Computer&);
 
+        void zeros();
+        void zeros(Computer&);
+
+        void ones();
+        void ones(Computer&);
+
+        void eye(const T& value = T(1));
+        void eye(const T& value, Computer&);
+
         // methods (immutable)
         void map(const std::function<T(const T&)>&, Mat<T>&) const;
         void map(const std::string&, Mat<T>&, Computer&) const;
 
         void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&) const;
         void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&) const;
+
+        void add(const Mat<T>&, Mat<T>&) const;
+        void add(const Mat<T>&, Mat<T>&, Computer&) const;
+
+        void sub(const Mat<T>&, Mat<T>&) const;
+        void sub(const Mat<T>&, Mat<T>&, Computer&) const;
+
+        void hadamard(const Mat<T>&, Mat<T>&) const;
+        void hadamard(const Mat<T>&, Mat<T>&, Computer&) const;
 
         ~Mat();
     };
@@ -311,6 +328,39 @@ void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
     video.compute(temp, gen, {&array}, {h, w});
 }
 
+template<typename T>
+void mcf::Mat<T>::zeros(){
+    gen([](size_t i, size_t j){
+        return T(0);
+    });
+}
+template<typename T>
+void mcf::Mat<T>::zeros(ecl::Computer& video){
+    gen("ret = 0;", video);
+}
+
+template<typename T>
+void mcf::Mat<T>::ones(){
+    gen([](size_t i, size_t j){
+        return T(1);
+    });
+}
+template<typename T>
+void mcf::Mat<T>::ones(ecl::Computer& video){
+    gen("ret = 1;", video);
+}
+
+template<typename T>
+void mcf::Mat<T>::eye(const T& value){
+    gen([&](size_t i, size_t j){
+        return i == j ? value : T(0);
+    });
+}
+template<typename T>
+void mcf::Mat<T>::eye(const T& value, ecl::Computer& video){
+    std::string val = std::to_string(value);
+    gen("ret = i == j ? + " + val + " : 0;", video);
+}
 
 // methods (immutable)
 template<typename T>
@@ -372,6 +422,40 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
     video.compute(temp, transform, {&array, &X.array, &result.array}, {h, w});
 }
+
+template<typename T>
+void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result) const{
+    transform(X, [](const T& v1, const T& v2){
+        return v1 + v2;
+    }, result);
+}
+template<typename T>
+void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video) const{
+    transform(X, "ret = v1 + v2;", result, video);
+}
+
+template<typename T>
+void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result) const{
+    transform(X, [](const T& v1, const T& v2){
+        return v1 - v2;
+    }, result);
+}
+template<typename T>
+void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video) const{
+    transform(X, "ret = v1 - v2;", result, video);
+}
+
+template<typename T>
+void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result) const{
+    transform(X, [](const T& v1, const T& v2){
+        return v1 * v2;
+    }, result);
+}
+template<typename T>
+void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video) const{
+    transform(X, "ret = v1 * v2;", result, video);
+}
+
 
 template<typename T>
 mcf::Mat<T>::~Mat(){
