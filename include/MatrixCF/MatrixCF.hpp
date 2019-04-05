@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+#include <omp.h>
 #include "EasyCL.hpp"
 
 namespace mcf{
@@ -51,6 +53,10 @@ namespace mcf{
         friend Computer& operator<<(Computer&, Mat<U>&);
         template<typename U>
         friend Computer& operator>>(Computer&, Mat<U>&);
+
+        // methods (mutable)
+        void gen(const std::function<T(size_t, size_t, const T&)>&);
+        void gen(const std::string&, Computer&);
 
         ~Mat();
     };
@@ -228,6 +234,32 @@ namespace mcf{
         other.receive(video);
         return video;
     }
+}
+
+// methods (mutable)
+template<typename T>
+void mcf::Mat<T>::gen(const std::function<T(size_t, size_t, const T&)>& f){
+    #pragma omp parallel for collapse(2)
+    for(size_t i = 0; h > i; i++){
+        for(size_t j = 0; w > j; j++) setE(f(i, j, getE(i, j)), i, j);
+    }
+}
+template<typename T>
+void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
+    ecl::Program temp = "__kernel void gen";
+    temp += "(__global int* result)";
+    temp += "{\n";
+    temp += "size_t i = get_global_id(0);\n";
+    temp += "size_t j = get_global_id(1);\n";
+    temp += "size_t w = get_global_size(1);\n";
+    temp += "size_t index = i * w + j;\n";
+    temp += "int v = result[index];";
+    temp += body + "\n";
+    temp += "}";
+
+    ecl::Kernel gen = "gen";
+
+    video.compute(temp, gen, {&array}, {h, w});
 }
 
 template<typename T>

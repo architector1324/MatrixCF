@@ -1,25 +1,29 @@
 #include <iostream>
 #include "MatrixCF/MatrixCF.hpp"
 
-void foo(const int* A){
-    std::cout << A[0] << std::endl;
-}
-
 int main()
 {
-    int ptr[] = {1, 2, 3, 4, 5, 6};
-    mcf::Mat<int> A(ptr, 3, 2);
+    mcf::Mat<int> A(3, 3);
+    mcf::Mat<int> B(3, 3);
 
+    // cpu gen
+    A.gen([](size_t i, size_t j, const int& v){
+        return i + j;
+    });
+
+    // gpu gen
     auto* p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 
-    video << A;
-    video >> A;
+    video << B;
+    B.gen("result[index] = i + j;", video);
+    video >> B;
 
-    std::cout << A;
-    foo(A);
+    // output
+    std::cout << A << std::endl;
+    std::cout << B;
 
-    A.release(video);
+    B.release(video);
     ecl::System::free();
     
     return 0;
