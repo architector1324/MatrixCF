@@ -16,6 +16,7 @@ namespace mcf{
         Variable<bool> ref;
 
         void clearFields();
+        std::string getTypeName();
     public:
         Mat();
         Mat(size_t, size_t);
@@ -70,6 +71,24 @@ void mcf::Mat<T>::clearFields(){
     total_size = 0;
     array.clearFields();
     ref = 0;
+}
+
+template<typename T>
+std::string mcf::Mat<T>::getTypeName(){
+    if constexpr (std::is_same<T, bool>::value) return "bool";
+    else if constexpr (std::is_same<T, char>::value) return "char";
+    else if constexpr (std::is_same<T, unsigned char>::value) return "unsigned char";
+    else if constexpr (std::is_same<T, short>::value) return "short";
+    else if constexpr (std::is_same<T, unsigned short>::value) return "unsigned short";
+    else if constexpr(std::is_same<T, int>::value) return "int";
+    else if constexpr(std::is_same<T, unsigned int>::value) return "unsigned int";
+    else if constexpr(std::is_same<T, long>::value) return "long";
+    else if constexpr(std::is_same<T, unsigned long>::value) return "unsigned long";
+    else if constexpr(std::is_same<T, float>::value) return "float";
+    else if constexpr (std::is_same<T, double>::value) return "double";
+    else if constexpr(std::is_same<T, size_t>::value) return "size_t";
+    else throw std::runtime_error("Get matrix type name: computer calculations on matrices with this template aren't supported");
+
 }
 
 // Constructors
@@ -246,14 +265,16 @@ void mcf::Mat<T>::gen(const std::function<T(size_t, size_t, const T&)>& f){
 }
 template<typename T>
 void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
+    std::string type = getTypeName();
+
     ecl::Program temp = "__kernel void gen";
-    temp += "(__global int* result)";
+    temp += "(__global " + type + "* result)";
     temp += "{\n";
     temp += "size_t i = get_global_id(0);\n";
     temp += "size_t j = get_global_id(1);\n";
     temp += "size_t w = get_global_size(1);\n";
     temp += "size_t index = i * w + j;\n";
-    temp += "int v = result[index];";
+    temp += type + " v = result[index];";
     temp += body + "\n";
     temp += "}";
 
