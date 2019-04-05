@@ -1,36 +1,51 @@
 #include <iostream>
 #include <cmath>
+#include <chrono>
 #include "MatrixCF/MatrixCF.hpp"
+
+void executionTime(const std::function<void()>& f, size_t times = 1){
+    for(size_t i = 0; i < times; i++){
+        auto start = std::chrono::high_resolution_clock::now();
+        f();
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto mcs = std::chrono::duration_cast<std::chrono::microseconds>(end - start); 
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start); 
+        std::cout << mcs.count() << " mcs (" << ms.count() << " ms)" << std::endl;
+    }
+}
 
 int main()
 {
-    float ptr1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    float ptr2[] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
+    mcf::Mat<float> A(8000, 8000);
+    mcf::Mat<float> B(8000, 8000);
 
-    mcf::Mat<float> A(ptr1, 3, 3);
-    mcf::Mat<float> B(ptr2, 3, 3);
+    auto f1 = [](size_t i, size_t j){
+        return sin(i + j);
+    };
+    std::string f2 = "ret = sin((float)(i + j));";
 
-    mcf::Mat<float> C(3, 3);
-    mcf::Mat<float> D(3, 3);
+    // cpu
+    executionTime([&](){
+        A.gen(f1);
+        B.gen(f1);
+    }, 5);
+    std::cout << std::endl;
 
-    // cpu hadamard
-    A.hadamard(B, C);
-
-    // gpu hadamard
+    // gpu
     auto* p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 
-    video << A << B << D;
-    A.hadamard(B, D, video);
-    video >> D;
-
-    // output
-    std::cout << C << std::endl;
-    std::cout << D;
+    video << A << B;
+    executionTime([&](){
+        A.gen(f2, video);
+        B.gen(f2, video);
+    }, 5);
+    video >> A >> B;
 
     A.release(video);
     B.release(video);
-    D.release(video);
-    
+    ecl::System::free();
+
     return 0;
 }
