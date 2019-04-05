@@ -16,7 +16,8 @@ namespace mcf{
         Variable<bool> ref;
 
         void clearFields();
-        std::string getTypeName();
+        std::string getTypeName() const;
+        void requireResultShape(const Mat<T>&, size_t, size_t, const std::string&) const;
     public:
         Mat();
         Mat(size_t, size_t);
@@ -56,8 +57,14 @@ namespace mcf{
         friend Computer& operator>>(Computer&, Mat<U>&);
 
         // methods (mutable)
-        void gen(const std::function<T(size_t, size_t, const T&)>&);
+        void gen(const std::function<T(size_t, size_t)>&);
         void gen(const std::string&, Computer&);
+
+        // methods (immutable)
+        void map(const std::function<T(const T&)>&, Mat<T>&) const;
+        void map(const std::string&, Mat<T>&, Computer&) const;
+
+        // void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&) const;
 
         ~Mat();
     };
@@ -74,7 +81,7 @@ void mcf::Mat<T>::clearFields(){
 }
 
 template<typename T>
-std::string mcf::Mat<T>::getTypeName(){
+std::string mcf::Mat<T>::getTypeName() const{
     if constexpr (std::is_same<T, bool>::value) return "bool";
     else if constexpr (std::is_same<T, char>::value) return "char";
     else if constexpr (std::is_same<T, unsigned char>::value) return "unsigned char";
@@ -89,6 +96,22 @@ std::string mcf::Mat<T>::getTypeName(){
     else if constexpr(std::is_same<T, size_t>::value) return "size_t";
     else throw std::runtime_error("Get matrix type name: computer calculations on matrices with this template aren't supported");
 
+}
+
+template<typename T>
+void mcf::Mat<T>::requireResultShape(const Mat<T>& result, size_t require_h, size_t require_w, const std::string& where) const{
+    size_t r_h = result.getH();
+    size_t r_w = result.getW();
+
+    if(r_h != require_h || r_w != require_w){
+        std::string e = "Require result shape [" + where + "]: ";
+        e += "wrong result matrix shape ";
+        e += std::to_string(r_h) + "x" + std::to_string(r_w);
+        e += " != ";
+        e += std::to_string(require_h) + "x" + std::to_string(require_w);
+
+        throw std::runtime_error(e);
+    }
 }
 
 // Constructors
@@ -257,10 +280,10 @@ namespace mcf{
 
 // methods (mutable)
 template<typename T>
-void mcf::Mat<T>::gen(const std::function<T(size_t, size_t, const T&)>& f){
+void mcf::Mat<T>::gen(const std::function<T(size_t, size_t)>& f){
     #pragma omp parallel for collapse(2)
     for(size_t i = 0; h > i; i++){
-        for(size_t j = 0; w > j; j++) setE(f(i, j, getE(i, j)), i, j);
+        for(size_t j = 0; w > j; j++) setE(f(i, j), i, j);
     }
 }
 template<typename T>
@@ -272,16 +295,53 @@ void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
     temp += "{\n";
     temp += "size_t i = get_global_id(0);\n";
     temp += "size_t j = get_global_id(1);\n";
+    temp += "size_t h = get_global_size(0);\n";
     temp += "size_t w = get_global_size(1);\n";
     temp += "size_t index = i * w + j;\n";
-    temp += type + " v = result[index];";
+    temp += type + " ret;\n";
     temp += body + "\n";
+    temp += "result[index] = ret;";
     temp += "}";
 
     ecl::Kernel gen = "gen";
 
     video.compute(temp, gen, {&array}, {h, w});
 }
+
+
+// methods (immutable)
+template<typename T>
+void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result) const{
+    requireResultShape(result, h, w, "map");
+
+    #pragma omp parallel for
+    for(size_t i = 0; total_size > i; i++) result.getArray()[i] = f(getConstArray()[i]);
+}
+template<typename T>
+void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Computer& video) const{
+    requireResultShape(result, h, w, "map");
+
+    std::string type = getTypeName();
+
+    ecl::Program temp = "__kernel void map";
+    temp += "(__global " + type + "* a, __global " + type + "* result)";
+    temp += "{\n";
+    temp += "size_t index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+    temp += type + " v = a[index];\n";
+    temp += type + " ret;\n";
+    temp += body + "\n";
+    temp += "result[index] = ret;";
+    temp += "}";
+
+    ecl::Kernel map = "map";
+
+    video.compute(temp, map, {&array, &result.array}, {h, w});
+}
+
+// template<typename T>
+// void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, const T&)>& f, Mat<T>& result) const{
+
+// }
 
 template<typename T>
 mcf::Mat<T>::~Mat(){
