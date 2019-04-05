@@ -7,12 +7,12 @@ int main()
     mcf::Mat<int> A(3, 3);
     mcf::Mat<int> B(3, 3);
 
-    // cpu map
+    // cpu gen
     A.gen([](size_t i, size_t j){
         return i + j;
     });
 
-    // gpu map
+    // gpu gen
     auto* p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 

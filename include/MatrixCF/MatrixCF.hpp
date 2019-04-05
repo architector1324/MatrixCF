@@ -17,7 +17,7 @@ namespace mcf{
 
         void clearFields();
         std::string getTypeName() const;
-        void requireResultShape(const Mat<T>&, size_t, size_t, const std::string&) const;
+        void requireMatrixShape(const Mat<T>&, size_t, size_t, const std::string&, bool is_result = false) const;
     public:
         Mat();
         Mat(size_t, size_t);
@@ -64,7 +64,8 @@ namespace mcf{
         void map(const std::function<T(const T&)>&, Mat<T>&) const;
         void map(const std::string&, Mat<T>&, Computer&) const;
 
-        // void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&) const;
+        void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&) const;
+        void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&) const;
 
         ~Mat();
     };
@@ -99,13 +100,15 @@ std::string mcf::Mat<T>::getTypeName() const{
 }
 
 template<typename T>
-void mcf::Mat<T>::requireResultShape(const Mat<T>& result, size_t require_h, size_t require_w, const std::string& where) const{
-    size_t r_h = result.getH();
-    size_t r_w = result.getW();
+void mcf::Mat<T>::requireMatrixShape(const Mat<T>& X, size_t require_h, size_t require_w, const std::string& where, bool is_result) const{
+    size_t r_h = X.getH();
+    size_t r_w = X.getW();
 
     if(r_h != require_h || r_w != require_w){
-        std::string e = "Require result shape [" + where + "]: ";
-        e += "wrong result matrix shape ";
+        std::string what = is_result ? "result matrix" : "matrix";
+
+        std::string e = "Require shape [" + where + "]: ";
+        e += "wrong " + what + " shape ";
         e += std::to_string(r_h) + "x" + std::to_string(r_w);
         e += " != ";
         e += std::to_string(require_h) + "x" + std::to_string(require_w);
@@ -312,14 +315,14 @@ void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
 // methods (immutable)
 template<typename T>
 void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result) const{
-    requireResultShape(result, h, w, "map");
+    requireMatrixShape(result, h, w, "map", true);
 
     #pragma omp parallel for
     for(size_t i = 0; total_size > i; i++) result.getArray()[i] = f(getConstArray()[i]);
 }
 template<typename T>
 void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Computer& video) const{
-    requireResultShape(result, h, w, "map");
+    requireMatrixShape(result, h, w, "map", true);
 
     std::string type = getTypeName();
 
@@ -338,10 +341,37 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
     video.compute(temp, map, {&array, &result.array}, {h, w});
 }
 
-// template<typename T>
-// void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, const T&)>& f, Mat<T>& result) const{
+template<typename T>
+void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, const T&)>& f, Mat<T>& result) const{
+    requireMatrixShape(X, h, w, "transform");
+    requireMatrixShape(result, h, w, "transform", true);
 
-// }
+    #pragma omp parallel for
+    for(size_t i = 0; total_size > i; i++) result.getArray()[i] = f(getConstArray()[i], X.getConstArray()[i]);
+}
+
+template<typename T>
+void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& result, ecl::Computer& video) const{
+    requireMatrixShape(X, h, w, "transform");
+    requireMatrixShape(result, h, w, "transform", true);
+
+    std::string type = getTypeName();
+
+    ecl::Program temp = "__kernel void transform";
+    temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+    temp += "{\n";
+    temp += "size_t index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+    temp += type + " v1 = a[index];\n";
+    temp += type + " v2 = b[index];\n";
+    temp += type + " ret;\n";
+    temp += body + "\n";
+    temp += "result[index] = ret;";
+    temp += "}";
+
+    ecl::Kernel transform = "transform";
+
+    video.compute(temp, transform, {&array, &X.array, &result.array}, {h, w});
+}
 
 template<typename T>
 mcf::Mat<T>::~Mat(){
