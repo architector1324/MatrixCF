@@ -80,8 +80,8 @@ namespace mcf{
         void map(const std::function<T(const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void map(const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
-        void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&) const;
-        void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&) const;
+        void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
+        void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
         void transpose(Mat<T>&) const;
         void transpose(Mat<T>&, Computer&) const;
@@ -462,34 +462,108 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
 }
 
 template<typename T>
-void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, const T&)>& f, Mat<T>& result) const{
-    requireMatrixShape(X, h, w, "transform");
-    requireMatrixShape(result, h, w, "transform", true);
+void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, const T&)>& f, Mat<T>& result, TRANSPOSE option) const{
+    if(option == NONE){
+        requireMatrixShape(X, h, w, "transform");
+        requireMatrixShape(result, h, w, "transform", true);
 
-    #pragma omp parallel for
-    for(size_t i = 0; total_size > i; i++) result.getArray()[i] = f(getConstArray()[i], X.getConstArray()[i]);
+        #pragma omp parallel for
+        for(size_t i = 0; total_size > i; i++) result.array[i] = f(array[i], X.array[i]);
+
+    }else if(option == FIRST){
+        requireMatrixShape(X, w, h, "transform");
+        requireMatrixShape(result, w, h, "transform", true);
+
+        #pragma omp parallel for collapse(2)
+        for(size_t i = 0; w > i; i++){
+            for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(i, j));
+        }
+
+    }else if(option == SECOND){
+        requireMatrixShape(*this, X.w, X.h, "transform");
+        requireMatrixShape(result, X.w, X.h, "transform", true);
+
+        #pragma omp parallel for collapse(2)
+        for(size_t i = 0; X.w > i; i++){
+            for(size_t j = 0; X.h > j; j++) result[i][j] = f(getE(i, j), X.getE(j, i));
+        }
+    }else{
+        requireMatrixShape(X, h, w, "transform");
+        requireMatrixShape(result, w, h, "transform", true);
+
+        #pragma omp parallel for collapse(2)
+        for(size_t i = 0; w > i; i++){
+            for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(j, i));
+        }
+    }
 }
 template<typename T>
-void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& result, ecl::Computer& video) const{
-    requireMatrixShape(X, h, w, "transform");
-    requireMatrixShape(result, h, w, "transform", true);
+void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+    if(option == NONE){
+        requireMatrixShape(X, h, w, "transform");
+        requireMatrixShape(result, h, w, "transform", true);
 
-    std::string type = getTypeName();
+        std::string type = getTypeName();
 
-    ecl::Program temp = "__kernel void transform";
-    temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
-    temp += "{\n";
-    temp += "size_t index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
-    temp += type + " v1 = a[index];\n";
-    temp += type + " v2 = b[index];\n";
-    temp += type + " ret;\n";
-    temp += body + "\n";
-    temp += "result[index] = ret;\n";
-    temp += "}";
+        ecl::Program temp = "__kernel void transform";
+        temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        temp += "{\n";
+        temp += "size_t index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        temp += type + " v1 = a[index];\n";
+        temp += type + " v2 = b[index];\n";
+        temp += type + " ret;\n";
+        temp += body + "\n";
+        temp += "result[index] = ret;\n";
+        temp += "}";
 
-    ecl::Kernel transform = "transform";
+        ecl::Kernel transform = "transform";
 
-    video.compute(temp, transform, {&array, &X.array, &result.array}, {h, w});
+        video.compute(temp, transform, {&array, &X.array, &result.array}, {h, w});
+
+    }else if(option == FIRST){
+        requireMatrixShape(X, w, h, "transform");
+        requireMatrixShape(result, w, h, "transform", true);
+
+        // #pragma omp parallel for collapse(2)
+        // for(size_t i = 0; w > i; i++){
+        //     for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(i, j));
+        // }
+
+        std::string type = getTypeName();
+
+        ecl::Program temp = "__kernel void transform";
+        temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        temp += "{\n";
+        temp += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        temp += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
+        temp += type + " v1 = a[index];\n";
+        temp += type + " v2 = b[result_index];\n";
+        temp += type + " ret;\n";
+        temp += body + "\n";
+        temp += "result[result_index] = ret;\n";
+        temp += "}";
+
+        ecl::Kernel transform = "transform";
+
+        video.compute(temp, transform, {&array, &X.array, &result.array}, {w, h});
+
+    }else if(option == SECOND){
+        requireMatrixShape(*this, X.w, X.h, "transform");
+        requireMatrixShape(result, X.w, X.h, "transform", true);
+
+        // #pragma omp parallel for collapse(2)
+        // for(size_t i = 0; X.w > i; i++){
+        //     for(size_t j = 0; X.h > j; j++) result[i][j] = f(getE(i, j), X.getE(j, i));
+        // }
+    }else{
+        requireMatrixShape(X, h, w, "transform");
+        requireMatrixShape(result, w, h, "transform", true);
+
+        // #pragma omp parallel for collapse(2)
+        // for(size_t i = 0; w > i; i++){
+        //     for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(j, i));
+        // }
+    }
 }
 
 template<typename T>
