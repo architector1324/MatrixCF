@@ -3,26 +3,24 @@
 
 int main()
 {
-    mcf::Mat<float> A(4, 3);
+    mcf::Mat<int> A(4, 3);
 
-    mcf::Mat<float> B(3, 4);
-    mcf::Mat<float> C(3, 4);
+    mcf::Mat<int> B(3, 4);
+    mcf::Mat<int> C(3, 4);
 
     A.gen([&](size_t i, size_t j){
-        return 2 * (i + j);
+        return i + j;
     });
 
-    // cpu map
-    A.map([](const float& v){
-        return v / 2.0f;
-    }, B, mcf::TRANSPOSE::FIRST);
+    // cpu transpose
+    A.transpose(B);
 
-    // gpu map
+    // gpu transpose
     auto p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 
     video << A << C;
-    A.map("ret = v / 2.0f;", C, video, mcf::TRANSPOSE::FIRST);
+    A.transpose(C, video);
     video >> C;
 
     // output

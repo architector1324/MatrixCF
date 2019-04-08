@@ -20,7 +20,7 @@ int main()
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 
     video << A << C;
-    A.reduce(C, mcf::REDUCE::COLUMN, video);
+    A.reduce(C, video, mcf::REDUCE::COLUMN);
     video >> C;
     
     // output

@@ -8,6 +8,7 @@ namespace mcf{
     using namespace ecl;
 
     enum REDUCE {FULL, COLUMN, ROW};
+    enum TRANSPOSE {NONE, FIRST, SECOND, BOTH};
 
     template<typename T>
     class Mat{
@@ -76,11 +77,14 @@ namespace mcf{
         void eye(const T& value, Computer&);
 
         // methods (immutable)
-        void map(const std::function<T(const T&)>&, Mat<T>&) const;
-        void map(const std::string&, Mat<T>&, Computer&) const;
+        void map(const std::function<T(const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
+        void map(const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
         void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&) const;
         void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&) const;
+
+        void transpose(Mat<T>&) const;
+        void transpose(Mat<T>&, Computer&) const;
 
         void add(const Mat<T>&, Mat<T>&) const;
         void add(const Mat<T>&, Mat<T>&, Computer&) const;
@@ -92,7 +96,7 @@ namespace mcf{
         void hadamard(const Mat<T>&, Mat<T>&, Computer&) const;
 
         void reduce(Mat<T>&, REDUCE option = FULL) const;
-        void reduce(Mat<T>&, REDUCE option, Computer&) const;
+        void reduce(Mat<T>&, Computer&, REDUCE option = FULL) const;
 
         ~Mat();
     };
@@ -397,31 +401,64 @@ void mcf::Mat<T>::eye(const T& value, ecl::Computer& video){
 
 // methods (immutable)
 template<typename T>
-void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result) const{
-    requireMatrixShape(result, h, w, "map", true);
+void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result, TRANSPOSE option) const
+{
+    if(option == NONE){
+        requireMatrixShape(result, h, w, "map", true);
 
-    #pragma omp parallel for
-    for(size_t i = 0; total_size > i; i++) result.getArray()[i] = f(getConstArray()[i]);
+        #pragma omp parallel for
+        for(size_t i = 0; total_size > i; i++) result.array[i] = f(array[i]);
+    }
+    else{
+        requireMatrixShape(result, w, h, "map", true);
+
+        #pragma omp parallel for collapse(2)
+        for(size_t i = 0; w > i; i++){
+            for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i));
+        }
+    }
 }
 template<typename T>
-void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Computer& video) const{
-    requireMatrixShape(result, h, w, "map", true);
-
+void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const
+{
     std::string type = getTypeName();
 
-    ecl::Program temp = "__kernel void map";
-    temp += "(__global " + type + "* a, __global " + type + "* result)";
-    temp += "{\n";
-    temp += "size_t index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
-    temp += type + " v = a[index];\n";
-    temp += type + " ret;\n";
-    temp += body + "\n";
-    temp += "result[index] = ret;\n";
-    temp += "}";
+    if(option == NONE){
+        requireMatrixShape(result, h, w, "map", true);
 
-    ecl::Kernel map = "map";
+        ecl::Program temp = "__kernel void map";
+        temp += "(__global " + type + "* a, __global " + type + "* result)";
+        temp += "{\n";
+        temp += "size_t index = get_global_id(0);\n";
+        temp += type + " v = a[index];\n";
+        temp += type + " ret;\n";
+        temp += body + "\n";
+        temp += "result[index] = ret;\n";
+        temp += "}";
 
-    video.compute(temp, map, {&array, &result.array}, {h, w});
+        ecl::Kernel map = "map";
+
+        video.compute(temp, map, {&array, &result.array}, {total_size});
+    }
+    else{
+        requireMatrixShape(result, w, h, "map", true);
+
+        ecl::Program temp = "__kernel void map";
+        temp += "(__global " + type + "* a, __global " + type + "* result)";
+        temp += "{\n";
+        temp += "";
+        temp += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        temp += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
+        temp += type + " v = a[index];\n";
+        temp += type + " ret;\n";
+        temp += body + "\n";
+        temp += "result[result_index] = ret;\n";
+        temp += "}";
+
+        ecl::Kernel map = "map";
+
+        video.compute(temp, map, {&array, &result.array}, {w, h});
+    }
 }
 
 template<typename T>
@@ -432,7 +469,6 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
     #pragma omp parallel for
     for(size_t i = 0; total_size > i; i++) result.getArray()[i] = f(getConstArray()[i], X.getConstArray()[i]);
 }
-
 template<typename T>
 void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& result, ecl::Computer& video) const{
     requireMatrixShape(X, h, w, "transform");
@@ -454,6 +490,17 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
     ecl::Kernel transform = "transform";
 
     video.compute(temp, transform, {&array, &X.array, &result.array}, {h, w});
+}
+
+template<typename T>
+void mcf::Mat<T>::transpose(Mat<T>& result) const{
+    map([](const T& v){
+        return v;
+    }, result, FIRST);
+}
+template<typename T>
+void mcf::Mat<T>::transpose(Mat<T>& result, Computer& video) const{
+    map("ret = v;", result, video, FIRST);
 }
 
 template<typename T>
@@ -515,7 +562,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option) const{
     }
 }
 template<typename T>
-void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, ecl::Computer& video) const{
+void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option) const{
     if(option == FULL){
         throw std::runtime_error("full reduce on computer temporary unavailable");
     }else if(option == COLUMN){
