@@ -117,8 +117,7 @@ std::string mcf::Mat<T>::getTypeName() const{
     else if constexpr(std::is_same<T, float>::value) return "float";
     else if constexpr (std::is_same<T, double>::value) return "double";
     else if constexpr(std::is_same<T, size_t>::value) return "size_t";
-    else throw std::runtime_error("Get matrix type name: computer calculations on matrices with this template aren't supported");
-
+    else throw std::runtime_error("Get matrix typename: computer calculations on matrices with this template aren't supported");
 }
 
 template<typename T>

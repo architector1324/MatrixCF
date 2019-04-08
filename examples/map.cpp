@@ -15,7 +15,7 @@ int main()
     }, B);
 
     // gpu map
-    auto* p = ecl::System::getPlatform(0);
+    auto p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 
     video << A << C;
