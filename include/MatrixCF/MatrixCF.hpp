@@ -7,6 +7,8 @@
 namespace mcf{
     using namespace ecl;
 
+    enum REDUCE {FULL, COLUMN, ROW};
+
     template<typename T>
     class Mat{
     private:
@@ -88,6 +90,9 @@ namespace mcf{
 
         void hadamard(const Mat<T>&, Mat<T>&) const;
         void hadamard(const Mat<T>&, Mat<T>&, Computer&) const;
+
+        void reduce(Mat<T>&, REDUCE option = FULL) const;
+        void reduce(Mat<T>&, REDUCE option, Computer&) const;
 
         ~Mat();
     };
@@ -261,7 +266,7 @@ void mcf::Mat<T>::setE(const T& value, size_t i, size_t j){
 
 template<typename T>
 T* mcf::Mat<T>::operator[](size_t i){
-    return array + i;
+    return array + i * w;
 }
 
 template<typename T>
@@ -411,7 +416,7 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
     temp += type + " v = a[index];\n";
     temp += type + " ret;\n";
     temp += body + "\n";
-    temp += "result[index] = ret;";
+    temp += "result[index] = ret;\n";
     temp += "}";
 
     ecl::Kernel map = "map";
@@ -443,7 +448,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
     temp += type + " v2 = b[index];\n";
     temp += type + " ret;\n";
     temp += body + "\n";
-    temp += "result[index] = ret;";
+    temp += "result[index] = ret;\n";
     temp += "}";
 
     ecl::Kernel transform = "transform";
@@ -482,6 +487,83 @@ void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result) const{
 template<typename T>
 void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video) const{
     transform(X, "ret = v1 * v2;", result, video);
+}
+
+template<typename T>
+void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option) const{
+    if(option == FULL){
+        requireMatrixShape(result, 1, 1, "reduce", true);
+        result.zeros();
+
+        for(size_t i = 0; total_size > i; i++) result[0][0] += array[i];
+    }else if(option == COLUMN){
+        requireMatrixShape(result, 1, w, "reduce", true);
+        result.zeros();
+
+        #pragma omp parallel for
+        for(size_t j = 0; w > j; j++){
+            for(size_t i = 0; h > i; i++) result[0][j] += getE(i, j);
+        }
+    } else if(option == ROW){
+        requireMatrixShape(result, h, 1, "reduce", true);
+        result.zeros();
+
+        #pragma omp parallel for
+        for(size_t i = 0; h > i; i++){
+            for(size_t j = 0; w > j; j++) result[i][0] += getE(i, j);
+        }
+    }
+}
+template<typename T>
+void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, ecl::Computer& video) const{
+    if(option == FULL){
+        throw std::runtime_error("full reduce on computer temporary unavailable");
+    }else if(option == COLUMN){
+        requireMatrixShape(result, 1, w, "reduce", true);
+        result.zeros(video);
+
+        std::string type = getTypeName();
+
+        ecl::Program temp = "__kernel void reduce";
+        temp += "(__global " + type + "* a, __global " + type + "* result)";
+        temp += "{\n";
+        temp += "size_t j = get_global_id(0);\n";
+        temp += "size_t w = get_global_size(0);\n";
+        temp += type + " sum = 0;\n";
+        temp += "for(size_t i = 0; i < " + std::to_string(h) + "; i++){\n";
+        temp += "sum += a[i * w + j];\n";
+        temp += "}\n";
+        temp += "result[j] = sum;\n";
+        temp += "}";
+
+        ecl::Kernel reduce = "reduce";
+
+        video.compute(temp, reduce, {&array, &result.array}, {w});
+
+    } else if(option == ROW){
+        requireMatrixShape(result, h, 1, "reduce", true);
+        result.zeros(video);
+
+        std::string type = getTypeName();
+
+        ecl::Program temp = "__kernel void reduce";
+        temp += "(__global " + type + "* a, __global " + type + "* result)";
+        temp += "{\n";
+        temp += "size_t i = get_global_id(0);";
+        temp += "size_t h = get_global_size(0);";
+        temp += "size_t w = " + std::to_string(w) + ";";
+        temp += "size_t iw = i * w;\n";
+        temp += type + " sum = 0;\n";
+        temp += "for(size_t j = 0; j < w; j++){\n";
+        temp += "sum += a[iw + j];";
+        temp += "}\n";
+        temp += "result[i] = sum;\n";
+        temp += "}";
+
+        ecl::Kernel reduce = "reduce";
+
+        video.compute(temp, reduce, {&array, &result.array}, {h});
+    }
 }
 
 
