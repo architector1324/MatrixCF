@@ -76,24 +76,26 @@ namespace mcf{
         void eye(const T& value = T(1));
         void eye(const T& value, Computer&);
 
-        // methods (immutable)
+        
+        // higher-order methods (immutable)
         void map(const std::function<T(const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void map(const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
         void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
+        // methods (immutable)
         void transpose(Mat<T>&) const;
         void transpose(Mat<T>&, Computer&) const;
 
-        void add(const Mat<T>&, Mat<T>&) const;
-        void add(const Mat<T>&, Mat<T>&, Computer&) const;
+        void add(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
+        void add(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
-        void sub(const Mat<T>&, Mat<T>&) const;
-        void sub(const Mat<T>&, Mat<T>&, Computer&) const;
+        void sub(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
+        void sub(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
-        void hadamard(const Mat<T>&, Mat<T>&) const;
-        void hadamard(const Mat<T>&, Mat<T>&, Computer&) const;
+        void hadamard(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
+        void hadamard(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
         void reduce(Mat<T>&, REDUCE option = FULL) const;
         void reduce(Mat<T>&, Computer&, REDUCE option = FULL) const;
@@ -399,7 +401,7 @@ void mcf::Mat<T>::eye(const T& value, ecl::Computer& video){
     gen("ret = i == j ? + " + val + " : 0;", video);
 }
 
-// methods (immutable)
+// higher-order methods (immutable)
 template<typename T>
 void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result, TRANSPOSE option) const
 {
@@ -524,11 +526,6 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         requireMatrixShape(X, w, h, "transform");
         requireMatrixShape(result, w, h, "transform", true);
 
-        // #pragma omp parallel for collapse(2)
-        // for(size_t i = 0; w > i; i++){
-        //     for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(i, j));
-        // }
-
         std::string type = getTypeName();
 
         ecl::Program temp = "__kernel void transform";
@@ -551,21 +548,48 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         requireMatrixShape(*this, X.w, X.h, "transform");
         requireMatrixShape(result, X.w, X.h, "transform", true);
 
-        // #pragma omp parallel for collapse(2)
-        // for(size_t i = 0; X.w > i; i++){
-        //     for(size_t j = 0; X.h > j; j++) result[i][j] = f(getE(i, j), X.getE(j, i));
-        // }
+        std::string type = getTypeName();
+
+        ecl::Program temp = "__kernel void transform";
+        temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        temp += "{\n";
+        temp += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        temp += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
+        temp += type + " v1 = a[result_index];\n";
+        temp += type + " v2 = b[index];\n";
+        temp += type + " ret;\n";
+        temp += body + "\n";
+        temp += "result[result_index] = ret;\n";
+        temp += "}";
+
+        ecl::Kernel transform = "transform";
+
+        video.compute(temp, transform, {&array, &X.array, &result.array}, {X.w, X.h});
     }else{
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, w, h, "transform", true);
 
-        // #pragma omp parallel for collapse(2)
-        // for(size_t i = 0; w > i; i++){
-        //     for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(j, i));
-        // }
+        std::string type = getTypeName();
+
+        ecl::Program temp = "__kernel void transform";
+        temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        temp += "{\n";
+        temp += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        temp += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
+        temp += type + " v1 = a[index];\n";
+        temp += type + " v2 = b[index];\n";
+        temp += type + " ret;\n";
+        temp += body + "\n";
+        temp += "result[result_index] = ret;\n";
+        temp += "}";
+
+        ecl::Kernel transform = "transform";
+
+        video.compute(temp, transform, {&array, &X.array, &result.array}, {w, h});
     }
 }
 
+// methods (immutable)
 template<typename T>
 void mcf::Mat<T>::transpose(Mat<T>& result) const{
     map([](const T& v){
@@ -578,36 +602,36 @@ void mcf::Mat<T>::transpose(Mat<T>& result, Computer& video) const{
 }
 
 template<typename T>
-void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result) const{
+void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     transform(X, [](const T& v1, const T& v2){
         return v1 + v2;
-    }, result);
+    }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video) const{
-    transform(X, "ret = v1 + v2;", result, video);
+void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+    transform(X, "ret = v1 + v2;", result, video, option);
 }
 
 template<typename T>
-void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result) const{
+void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     transform(X, [](const T& v1, const T& v2){
         return v1 - v2;
-    }, result);
+    }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video) const{
-    transform(X, "ret = v1 - v2;", result, video);
+void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+    transform(X, "ret = v1 - v2;", result, video, option);
 }
 
 template<typename T>
-void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result) const{
+void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     transform(X, [](const T& v1, const T& v2){
         return v1 * v2;
-    }, result);
+    }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video) const{
-    transform(X, "ret = v1 * v2;", result, video);
+void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+    transform(X, "ret = v1 * v2;", result, video, option);
 }
 
 template<typename T>
