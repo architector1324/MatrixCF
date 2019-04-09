@@ -88,6 +88,9 @@ namespace mcf{
         void transpose(Mat<T>&) const;
         void transpose(Mat<T>&, Computer&) const;
 
+        void reduce(Mat<T>&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
+        void reduce(Mat<T>&, Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
+
         void add(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void add(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
@@ -97,8 +100,8 @@ namespace mcf{
         void hadamard(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void hadamard(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
-        void reduce(Mat<T>&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
-        void reduce(Mat<T>&, Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
+        void mul(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
+        void mul(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
         ~Mat();
     };
@@ -601,39 +604,6 @@ void mcf::Mat<T>::transpose(Mat<T>& result, Computer& video) const{
 }
 
 template<typename T>
-void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
-    transform(X, [](const T& v1, const T& v2){
-        return v1 + v2;
-    }, result, option);
-}
-template<typename T>
-void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
-    transform(X, "ret = v1 + v2;", result, video, option);
-}
-
-template<typename T>
-void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
-    transform(X, [](const T& v1, const T& v2){
-        return v1 - v2;
-    }, result, option);
-}
-template<typename T>
-void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
-    transform(X, "ret = v1 - v2;", result, video, option);
-}
-
-template<typename T>
-void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
-    transform(X, [](const T& v1, const T& v2){
-        return v1 * v2;
-    }, result, option);
-}
-template<typename T>
-void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
-    transform(X, "ret = v1 * v2;", result, video, option);
-}
-
-template<typename T>
 void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_option) const{
     if(transpose_option == NONE){
 
@@ -786,6 +756,81 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             video.compute(temp, reduce, {&array, &result.array}, {w});
         }
+    }
+}
+
+template<typename T>
+void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
+    transform(X, [](const T& v1, const T& v2){
+        return v1 + v2;
+    }, result, option);
+}
+template<typename T>
+void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+    transform(X, "ret = v1 + v2;", result, video, option);
+}
+
+template<typename T>
+void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
+    transform(X, [](const T& v1, const T& v2){
+        return v1 - v2;
+    }, result, option);
+}
+template<typename T>
+void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+    transform(X, "ret = v1 - v2;", result, video, option);
+}
+
+template<typename T>
+void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
+    transform(X, [](const T& v1, const T& v2){
+        return v1 * v2;
+    }, result, option);
+}
+template<typename T>
+void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+    transform(X, "ret = v1 * v2;", result, video, option);
+}
+
+template<typename T>
+void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
+    if(option == NONE){
+        requireMatrixShape(result, h, X.w, "mul", true);
+        requireMatrixShape(X, w, X.w, "mul");
+
+        result.zeros();
+
+        #pragma omp parallel for
+        for(size_t i = 0; h > i; i++){
+            for(size_t k = 0; X.h > k; k++) {
+                for(size_t j = 0; X.w > j; j++) result[i][j] += getE(i, k) * X.getE(k, j);
+            }
+        }
+    }
+}
+template<typename T>
+void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+    std::string type = getTypeName();
+
+    if(option == NONE){
+        requireMatrixShape(result, h, X.w, "mul", true);
+        requireMatrixShape(X, w, X.w, "mul");
+
+        ecl::Program prog = "__kernel void mul";
+        prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        prog += "{\n";
+        prog += "size_t i = get_global_id(0);\n";
+        prog += "size_t j = get_global_id(1);\n";
+        prog += "size_t w = get_global_size(1);\n";
+        prog += type + " sum = 0;\n";
+        prog += "for(size_t k = 0; k < " + std::to_string(X.h) + "; k++) ";
+        prog += "sum += a[i * " + std::to_string(w) + " + k] * b[k * w + j];\n";
+        prog += "result[i * w + j] = sum;\n";
+        prog += "}";
+
+        ecl::Kernel kern = "mul";
+
+        video.compute(prog, kern, {&array, &X.array, &result.array}, {h, X.w});
     }
 }
 
