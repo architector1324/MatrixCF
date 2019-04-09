@@ -97,8 +97,8 @@ namespace mcf{
         void hadamard(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void hadamard(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
-        void reduce(Mat<T>&, REDUCE option = FULL) const;
-        void reduce(Mat<T>&, Computer&, REDUCE option = FULL) const;
+        void reduce(Mat<T>&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
+        void reduce(Mat<T>&, Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
 
         ~Mat();
     };
@@ -429,8 +429,7 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
         requireMatrixShape(result, h, w, "map", true);
 
         ecl::Program temp = "__kernel void map";
-        temp += "(__global " + type + "* a, __global " + type + "* result)";
-        temp += "{\n";
+        temp += "(__global " + type + "* a, __global " + type + "* result){\n";
         temp += "size_t index = get_global_id(0);\n";
         temp += type + " v = a[index];\n";
         temp += type + " ret;\n";
@@ -635,79 +634,158 @@ void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video
 }
 
 template<typename T>
-void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option) const{
-    if(option == FULL){
-        requireMatrixShape(result, 1, 1, "reduce", true);
-        result.zeros();
+void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_option) const{
+    if(transpose_option == NONE){
 
-        for(size_t i = 0; total_size > i; i++) result[0][0] += array[i];
-    }else if(option == COLUMN){
-        requireMatrixShape(result, 1, w, "reduce", true);
-        result.zeros();
+        if(option == FULL){
+            requireMatrixShape(result, 1, 1, "reduce", true);
+            result.zeros();
 
-        #pragma omp parallel for
-        for(size_t j = 0; w > j; j++){
-            for(size_t i = 0; h > i; i++) result[0][j] += getE(i, j);
+            for(size_t i = 0; total_size > i; i++) result[0][0] += array[i];
+        }else if(option == COLUMN){
+            requireMatrixShape(result, 1, w, "reduce", true);
+            result.zeros();
+
+            #pragma omp parallel for
+            for(size_t j = 0; w > j; j++){
+                for(size_t i = 0; h > i; i++) result[0][j] += getE(i, j);
+            }
+        } else if(option == ROW){
+            requireMatrixShape(result, h, 1, "reduce", true);
+            result.zeros();
+
+            #pragma omp parallel for
+            for(size_t i = 0; h > i; i++){
+                for(size_t j = 0; w > j; j++) result[i][0] += getE(i, j);
+            }
         }
-    } else if(option == ROW){
-        requireMatrixShape(result, h, 1, "reduce", true);
-        result.zeros();
+    }else{
+            if(option == FULL){
+            requireMatrixShape(result, 1, 1, "reduce", true);
+            result.zeros();
 
-        #pragma omp parallel for
-        for(size_t i = 0; h > i; i++){
-            for(size_t j = 0; w > j; j++) result[i][0] += getE(i, j);
+            #pragma omp parallel for
+            for(size_t j = 0; h > j; j++){
+                for(size_t i = 0; w > i; i++) result[0][0] += getE(j, i);
+            }
+        }else if(option == COLUMN){
+            requireMatrixShape(result, 1, h, "reduce", true);
+            result.zeros();
+
+            #pragma omp parallel for
+            for(size_t j = 0; h > j; j++){
+                for(size_t i = 0; w > i; i++) result[0][j] += getE(j, i);
+            }
+        } else if(option == ROW){
+            requireMatrixShape(result, w, 1, "reduce", true);
+            result.zeros();
+
+            #pragma omp parallel for
+            for(size_t i = 0; w > i; i++){
+                for(size_t j = 0; h > j; j++) result[i][0] += getE(j, i);
+            }
         }
     }
 }
 template<typename T>
-void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option) const{
-    if(option == FULL){
-        throw std::runtime_error("full reduce on computer temporary unavailable");
-    }else if(option == COLUMN){
-        requireMatrixShape(result, 1, w, "reduce", true);
-        result.zeros(video);
+void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TRANSPOSE transpose_option) const{
+    if(transpose_option == NONE){
+        if(option == FULL){
+            throw std::runtime_error("full reduce on computer temporary unavailable");
+        }else if(option == COLUMN){
+            requireMatrixShape(result, 1, w, "reduce", true);
+            result.zeros(video);
 
-        std::string type = getTypeName();
+            std::string type = getTypeName();
 
-        ecl::Program temp = "__kernel void reduce";
-        temp += "(__global " + type + "* a, __global " + type + "* result)";
-        temp += "{\n";
-        temp += "size_t j = get_global_id(0);\n";
-        temp += "size_t w = get_global_size(0);\n";
-        temp += type + " sum = 0;\n";
-        temp += "for(size_t i = 0; i < " + std::to_string(h) + "; i++){\n";
-        temp += "sum += a[i * w + j];\n";
-        temp += "}\n";
-        temp += "result[j] = sum;\n";
-        temp += "}";
+            ecl::Program temp = "__kernel void reduce";
+            temp += "(__global " + type + "* a, __global " + type + "* result)";
+            temp += "{\n";
+            temp += "size_t j = get_global_id(0);\n";
+            temp += "size_t w = get_global_size(0);\n";
+            temp += type + " sum = 0;\n";
+            temp += "for(size_t i = 0; i < " + std::to_string(h) + "; i++){\n";
+            temp += "sum += a[i * w + j];\n";
+            temp += "}\n";
+            temp += "result[j] = sum;\n";
+            temp += "}";
 
-        ecl::Kernel reduce = "reduce";
+            ecl::Kernel reduce = "reduce";
 
-        video.compute(temp, reduce, {&array, &result.array}, {w});
+            video.compute(temp, reduce, {&array, &result.array}, {w});
 
-    } else if(option == ROW){
-        requireMatrixShape(result, h, 1, "reduce", true);
-        result.zeros(video);
+        } else if(option == ROW){
+            requireMatrixShape(result, h, 1, "reduce", true);
+            result.zeros(video);
 
-        std::string type = getTypeName();
+            std::string type = getTypeName();
 
-        ecl::Program temp = "__kernel void reduce";
-        temp += "(__global " + type + "* a, __global " + type + "* result)";
-        temp += "{\n";
-        temp += "size_t i = get_global_id(0);";
-        temp += "size_t h = get_global_size(0);";
-        temp += "size_t w = " + std::to_string(w) + ";";
-        temp += "size_t iw = i * w;\n";
-        temp += type + " sum = 0;\n";
-        temp += "for(size_t j = 0; j < w; j++){\n";
-        temp += "sum += a[iw + j];";
-        temp += "}\n";
-        temp += "result[i] = sum;\n";
-        temp += "}";
+            ecl::Program temp = "__kernel void reduce";
+            temp += "(__global " + type + "* a, __global " + type + "* result)";
+            temp += "{\n";
+            temp += "size_t i = get_global_id(0);";
+            temp += "size_t h = get_global_size(0);";
+            temp += "size_t w = " + std::to_string(w) + ";";
+            temp += "size_t iw = i * w;\n";
+            temp += type + " sum = 0;\n";
+            temp += "for(size_t j = 0; j < w; j++){\n";
+            temp += "sum += a[iw + j];";
+            temp += "}\n";
+            temp += "result[i] = sum;\n";
+            temp += "}";
 
-        ecl::Kernel reduce = "reduce";
+            ecl::Kernel reduce = "reduce";
 
-        video.compute(temp, reduce, {&array, &result.array}, {h});
+            video.compute(temp, reduce, {&array, &result.array}, {h});
+        }
+    }else{
+        if(option == FULL){
+            throw std::runtime_error("full reduce on computer temporary unavailable");
+        }else if(option == COLUMN){
+            requireMatrixShape(result, 1, h, "reduce", true);
+            result.zeros(video);
+
+            std::string type = getTypeName();
+
+            ecl::Program temp = "__kernel void reduce";
+            temp += "(__global " + type + "* a, __global " + type + "* result)";
+            temp += "{\n";
+            temp += "size_t j = get_global_id(0);\n";
+            temp += "size_t w = " + std::to_string(w) + ";\n";
+            temp += type + " sum = 0;\n";
+            temp += "for(size_t i = 0; i < w; i++){\n";
+            temp += "sum += a[j * w + i];\n";
+            temp += "}\n";
+            temp += "result[j] = sum;\n";
+            temp += "}";
+
+            ecl::Kernel reduce = "reduce";
+
+            video.compute(temp, reduce, {&array, &result.array}, {h});
+
+        } else if(option == ROW){
+            requireMatrixShape(result, w, 1, "reduce", true);
+            result.zeros(video);
+
+            std::string type = getTypeName();
+
+            ecl::Program temp = "__kernel void reduce";
+            temp += "(__global " + type + "* a, __global " + type + "* result)";
+            temp += "{\n";
+            temp += "size_t i = get_global_id(0);";
+            temp += "size_t h = " + std::to_string(h) + ";";
+            temp += "size_t w = get_global_size(0);";
+            temp += type + " sum = 0;\n";
+            temp += "for(size_t j = 0; j < h; j++){\n";
+            temp += "sum += a[j * w + i];";
+            temp += "}\n";
+            temp += "result[i] = sum;\n";
+            temp += "}";
+
+            ecl::Kernel reduce = "reduce";
+
+            video.compute(temp, reduce, {&array, &result.array}, {w});
+        }
     }
 }
 
