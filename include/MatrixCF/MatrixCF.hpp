@@ -39,6 +39,8 @@ namespace mcf{
         const Variable<size_t>& getH() const;
         const Variable<size_t>& getW() const;
         const Variable<size_t>& getTotalSize() const;
+
+        size_t totalMemoryUsed() const;
         bool isRef() const;
 
         const T& getE(size_t, size_t) const;
@@ -113,6 +115,9 @@ namespace mcf{
 
         void mul(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void mul(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
+
+        void mul(const T&, Mat<T>&, TRANSPOSE option = NONE) const;
+        void mul(const T&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
         void hsplit(Mat<T>&, Mat<T>&) const;
         void hsplit(Mat<T>&, Mat<T>&, Computer&) const;
@@ -287,6 +292,10 @@ mcf::Array<T>& mcf::Mat<T>::getArray(){
     return array;
 }
 
+template<typename T>
+size_t mcf::Mat<T>::totalMemoryUsed() const{
+    return total_size * sizeof(T);
+}
 template<typename T>
 bool mcf::Mat<T>::isRef() const{
     return ref;
@@ -1011,6 +1020,17 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRA
 
     ecl::Kernel mul = "mul";
     video.compute(prog, mul, {&array, &X.array, &result.array}, {first_h, second_w});
+}
+
+template<typename T>
+void mcf::Mat<T>::mul(const T& value, Mat<T>& result, TRANSPOSE option) const{
+    map([&](const T& v){
+        return v * value;
+    }, result, option);
+}
+template<typename T>
+void mcf::Mat<T>::mul(const T& value, Mat<T>& result, Computer& video, TRANSPOSE option) const{
+    map("ret = v * " + std::to_string(value) + ";", result, video, option);
 }
 
 template<typename T>
