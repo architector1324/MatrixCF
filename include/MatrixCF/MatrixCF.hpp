@@ -82,6 +82,9 @@ namespace mcf{
 
         void vstack(const Mat<T>&, const Mat<T>&);
         void vstack(const Mat<T>&, const Mat<T>&, Computer&);
+
+        void cpy(const Mat<T>&);
+        void view(Mat<T>&);
         
         // higher-order methods (immutable)
         void map(const std::function<T(const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
@@ -497,6 +500,23 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video)
 
     ecl::Kernel vstack = "vstack";
     video.compute(prog, vstack, {&A.array, &B.array, &array}, {h, w});
+}
+
+template<typename T>
+void mcf::Mat<T>::cpy(const Mat<T>& X){
+    requireMatrixShape(X, h, w, "cpy");
+
+    #pragma omp parallel for collapse(2)
+    for(size_t i = 0; h > i; i++)
+        for(size_t j = 0; w > j; j++) setE(X.getE(i, j), i, j);
+}
+template<typename T>
+void mcf::Mat<T>::view(Mat<T>& X){
+    requireTotalSize(X, total_size, "view");
+
+    array.clearFields();
+    array.setDataPtr(X.array.getDataPtr());
+    array.setDataSize(X.array.getDataSize());
 }
 
 // higher-order methods (immutable)
