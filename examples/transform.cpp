@@ -12,12 +12,12 @@ int main()
     mcf::Mat<float> C(4, 2);
     mcf::Mat<float> D(4, 2);
 
-    // cpu transform
+    // cpu
     A.transform(B, [](const float& v1, const float& v2){
         return v1 * v2;
     }, C, mcf::TRANSPOSE::BOTH);
 
-    // gpu transform
+    // gpu
     auto p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 

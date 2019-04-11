@@ -1,31 +1,30 @@
 #include <iostream>
-#include <chrono>
 #include "MatrixCF/MatrixCF.hpp"
 
 int main()
 {
-    mcf::Mat<int> A(3, 4);
+    mcf::Mat<int> A(3, 3);
     mcf::Mat<int> B(4, 3);
 
-    mcf::Mat<int> C(4, 4);
-    mcf::Mat<int> D(4, 4);
+    mcf::Mat<int> C(7, 3);
+    mcf::Mat<int> D(7, 3);
 
-    auto f = [](size_t i, size_t j){
+    A.gen([&](size_t i, size_t j){
         return i + j;
-    };
-
-    A.gen(f);
-    B.gen(f);
+    });
+    B.gen([&](size_t i, size_t j){
+        return i * j + 1;
+    });
 
     // cpu
-    A.mul(B, C, mcf::TRANSPOSE::BOTH);
+    C.vstack(A, B);
 
     // gpu
     auto p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 
     video << A << B << D;
-    A.mul(B, D, video, mcf::TRANSPOSE::BOTH);
+    D.vstack(A, B, video);
     video >> D;
 
     // output

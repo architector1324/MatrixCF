@@ -12,10 +12,10 @@ int main()
         return i * A.getW() + j + 1;
     });
 
-    // cpu reduce
+    // cpu
     A.reduce(B, mcf::REDUCE::ROW, mcf::TRANSPOSE::FIRST);
 
-    // gpu reduce
+    // gpu
     auto p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 

@@ -12,12 +12,12 @@ int main()
         return 2 * (i + j);
     });
 
-    // cpu map
+    // cpu
     A.map([](const float& v){
         return v / 2.0f;
     }, B, mcf::TRANSPOSE::FIRST);
 
-    // gpu map
+    // gpu
     auto p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 

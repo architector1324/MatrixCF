@@ -77,6 +77,11 @@ namespace mcf{
         void eye(const T& value = T(1));
         void eye(const T& value, Computer&);
 
+        void hstack(const Mat<T>&, const Mat<T>&);
+        void hstack(const Mat<T>&, const Mat<T>&, Computer&);
+
+        void vstack(const Mat<T>&, const Mat<T>&);
+        void vstack(const Mat<T>&, const Mat<T>&, Computer&);
         
         // higher-order methods (immutable)
         void map(const std::function<T(const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
@@ -413,6 +418,79 @@ template<typename T>
 void mcf::Mat<T>::eye(const T& value, ecl::Computer& video){
     std::string val = std::to_string(value);
     gen("ret = i == j ? + " + val + " : 0;", video);
+}
+
+template<typename T>
+void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B){
+    requireMatrixH(A.h, B.h, "hstack");
+    requireMatrixShape(*this, A.h, A.w + B.w, "hstack", true);
+
+    #pragma omp parallel for collapse(2)
+    for(size_t i = 0; h > i; i++){
+        for(size_t j = 0; w > j; j++){
+            if(A.w > j) setE(A.getE(i, j), i, j);
+            else setE(B.getE(i, j - A.w), i, j);
+        }
+    }
+}
+template<typename T>
+void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video){
+    std::string type = getTypeName();
+
+    requireMatrixH(A.h, B.h, "hstack");
+    requireMatrixShape(*this, A.h, A.w + B.w, "hstack", true);
+
+    ecl::Program prog = "__kernel void hstack";
+    prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+    prog += "{\n";
+    prog += "size_t i = get_global_id(0);\n";
+    prog += "size_t j = get_global_id(1);\n";
+    prog += "size_t w = get_global_size(1);\n";
+    prog += "size_t a_w = " + std::to_string(A.w) + ";\n";
+    prog += "size_t b_w = " + std::to_string(B.w) + ";\n";
+    prog += "if(j < a_w) result[i * w + j] = a[i * a_w + j];\n";
+    prog += "else result[i * w + j] = b[i * b_w + j - a_w];\n";
+    prog += "}";
+
+    ecl::Kernel hstack = "hstack";
+    video.compute(prog, hstack, {&A.array, &B.array, &array}, {h, w});
+}
+
+template<typename T>
+void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B){
+    requireMatrixH(A.w, B.w, "vstack");
+    requireMatrixShape(*this, A.h + B.h, A.w, "vstack", true);
+
+    #pragma omp parallel for collapse(2)
+    for(size_t i = 0; h > i; i++){
+        for(size_t j = 0; w > j; j++){
+            if(A.h > i) setE(A.getE(i, j), i, j);
+            else setE(B.getE(i - A.h, j), i, j);
+        }
+    }
+}
+template<typename T>
+void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video){
+    std::string type = getTypeName();
+
+    requireMatrixH(A.w, B.w, "vstack");
+    requireMatrixShape(*this, A.h + B.h, A.w, "vstack", true);
+
+    ecl::Program prog = "__kernel void vstack";
+    prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+    prog += "{\n";
+    prog += "size_t i = get_global_id(0);\n";
+    prog += "size_t j = get_global_id(1);\n";
+    prog += "size_t w = get_global_size(1);\n";
+    prog += "size_t a_h = " + std::to_string(A.h) + ";\n";
+    prog += "size_t a_w = " + std::to_string(A.w) + ";\n";
+    prog += "size_t b_w = " + std::to_string(B.w) + ";\n";
+    prog += "if(i < a_h) result[i * w + j] = a[i * a_w + j];\n";
+    prog += "else result[i * w + j] = b[(i - a_h) * b_w + j];\n";
+    prog += "}";
+
+    ecl::Kernel vstack = "vstack";
+    video.compute(prog, vstack, {&A.array, &B.array, &array}, {h, w});
 }
 
 // higher-order methods (immutable)
@@ -889,8 +967,8 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRA
     prog += "result[i * w + j] = sum;\n";
     prog += "}";
 
-    ecl::Kernel kern = "mul";
-    video.compute(prog, kern, {&array, &X.array, &result.array}, {first_h, second_w});
+    ecl::Kernel mul = "mul";
+    video.compute(prog, mul, {&array, &X.array, &result.array}, {first_h, second_w});
 }
 
 
