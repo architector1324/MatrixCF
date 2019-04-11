@@ -72,6 +72,9 @@ namespace mcf{
         void gen(const std::function<T(size_t, size_t)>&);
         void gen(const std::string&, Computer&);
 
+        void full(const T&);
+        void full(const T&, Computer&);
+
         void zeros();
         void zeros(Computer&);
 
@@ -420,6 +423,17 @@ void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
     video.compute(prog, gen, {&array}, {h, w});
 }
 
+template<typename T>
+void mcf::Mat<T>::full(const T& value){
+    gen([&](size_t i, size_t j){
+        return value;
+    });
+}
+template<typename T>
+void mcf::Mat<T>::full(const T& value, ecl::Computer& video){
+    std::string val = std::to_string(value);
+    gen("ret = " + val + ";", video);
+}
 template<typename T>
 void mcf::Mat<T>::zeros(){
     gen([](size_t i, size_t j){
@@ -1030,7 +1044,8 @@ void mcf::Mat<T>::mul(const T& value, Mat<T>& result, TRANSPOSE option) const{
 }
 template<typename T>
 void mcf::Mat<T>::mul(const T& value, Mat<T>& result, Computer& video, TRANSPOSE option) const{
-    map("ret = v * " + std::to_string(value) + ";", result, video, option);
+    std::string val = std::to_string(value);
+    map("ret = v * " + val + ";", result, video, option);
 }
 
 template<typename T>
