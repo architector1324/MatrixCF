@@ -43,6 +43,8 @@ int main()
     }, 5);
     video >> A >> B;
 
+    std::cout << A.equals(B) << std::endl;
+
     A.release(video);
     B.release(video);
     ecl::System::free();

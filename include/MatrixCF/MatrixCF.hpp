@@ -61,6 +61,8 @@ namespace mcf{
         friend Computer& operator>>(Computer&, Mat<U>&);
 
         // methods (extra)
+        bool equals(const Mat<T>&) const;
+
         void reshape(size_t, size_t);
         void ravel(bool is_column = false);
 
@@ -354,6 +356,20 @@ namespace mcf{
 }
 
 // methods (extra)
+template<typename T>
+bool mcf::Mat<T>::equals(const Mat<T>& X) const{
+    try{
+        requireMatrixShape(X, h, w, "equals");
+    } catch(int){
+        return false;
+    }
+
+    for(size_t i = 0; total_size > i; i++){
+        if(array[i] != X.array[i]) return false;
+    }
+    return true;
+}
+
 template<typename T>
 void mcf::Mat<T>::reshape(size_t new_h, size_t new_w){
     requireTotalSize(*this, new_h * new_w, "reshape");

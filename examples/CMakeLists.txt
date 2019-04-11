@@ -2,6 +2,7 @@ CMAKE_MINIMUM_REQUIRED (VERSION 3.7...3.13)
 
 matrixcf_add_example(transform transform.cpp)
 matrixcf_add_example(transpose transpose.cpp)
+matrixcf_add_example(equals equals.cpp)
 matrixcf_add_example(reduce reduce.cpp)
 matrixcf_add_example(hstack hstack.cpp)
 matrixcf_add_example(vstack vstack.cpp)
