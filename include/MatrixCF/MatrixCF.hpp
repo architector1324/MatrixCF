@@ -109,6 +109,12 @@ namespace mcf{
         void mul(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void mul(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
 
+        void hsplit(Mat<T>&, Mat<T>&) const;
+        void hsplit(Mat<T>&, Mat<T>&, Computer&) const;
+
+        void vsplit(Mat<T>&, Mat<T>&) const;
+        void vsplit(Mat<T>&, Mat<T>&, Computer&) const;
+
         ~Mat();
     };
 }
@@ -969,6 +975,79 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRA
 
     ecl::Kernel mul = "mul";
     video.compute(prog, mul, {&array, &X.array, &result.array}, {first_h, second_w});
+}
+
+template<typename T>
+void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B) const{
+    requireMatrixH(A.h, B.h, "hsplit");
+    requireMatrixShape(*this, A.h, A.w + B.w, "hsplit", true);
+
+    #pragma omp parallel for collapse(2)
+    for(size_t i = 0; h > i; i++){
+        for(size_t j = 0; w > j; j++){
+            if(A.w > j) A[i][j] = getE(i, j);
+            else B[i][j - A.w] = getE(i, j);
+        }
+    }
+}
+template<typename T>
+void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video) const{
+    std::string type = getTypeName();
+
+    requireMatrixH(A.h, B.h, "hsplit");
+    requireMatrixShape(*this, A.h, A.w + B.w, "hsplit", true);
+
+    ecl::Program prog = "__kernel void hsplit";
+    prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+    prog += "{\n";
+    prog += "size_t i = get_global_id(0);\n";
+    prog += "size_t j = get_global_id(1);\n";
+    prog += "size_t w = get_global_size(1);\n";
+    prog += "size_t a_w = " + std::to_string(A.w) + ";\n";
+    prog += "size_t b_w = " + std::to_string(B.w) + ";\n";
+    prog += "if(j < a_w) a[i * a_w + j] = result[i * w + j];\n";
+    prog += "else b[i * b_w + j - a_w] = result[i * w + j];\n";
+    prog += "}";
+
+    ecl::Kernel hsplit = "hsplit";
+    video.compute(prog, hsplit, {&A.array, &B.array, &array}, {h, w});
+}
+
+template<typename T>
+void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B) const{
+    requireMatrixH(A.w, B.w, "vsplit");
+    requireMatrixShape(*this, A.h + B.h, A.w, "vsplit", true);
+
+    #pragma omp parallel for collapse(2)
+    for(size_t i = 0; h > i; i++){
+        for(size_t j = 0; w > j; j++){
+            if(A.h > i) A[i][j] = getE(i, j);
+            else B[i - A.h][j] = getE(i, j);
+        }
+    }
+}
+template<typename T>
+void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video) const{
+    std::string type = getTypeName();
+
+    requireMatrixH(A.w, B.w, "vsplit");
+    requireMatrixShape(*this, A.h + B.h, A.w, "vsplit", true);
+
+    ecl::Program prog = "__kernel void vsplit";
+    prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+    prog += "{\n";
+    prog += "size_t i = get_global_id(0);\n";
+    prog += "size_t j = get_global_id(1);\n";
+    prog += "size_t w = get_global_size(1);\n";
+    prog += "size_t a_h = " + std::to_string(A.h) + ";\n";
+    prog += "size_t a_w = " + std::to_string(A.w) + ";\n";
+    prog += "size_t b_w = " + std::to_string(B.w) + ";\n";
+    prog += "if(i < a_h) a[i * a_w + j] = result[i * w + j];\n";
+    prog += "else b[(i - a_h) * b_w + j] = result[i * w + j];\n";
+    prog += "}";
+
+    ecl::Kernel vsplit = "vsplit";
+    video.compute(prog, vsplit, {&A.array, &B.array, &array}, {h, w});
 }
 
 
