@@ -16,11 +16,11 @@ void executionTime(const std::function<void()>& f, size_t times = 1){
 
 int main()
 {
-    mcf::Mat<int> A(2500, 2500);
-    mcf::Mat<int> B(2500, 2500);
+    mcf::Mat<int> A(3, 4);
+    mcf::Mat<int> B(4, 3);
 
-    mcf::Mat<int> C(2500, 2500);
-    mcf::Mat<int> D(2500, 2500);
+    mcf::Mat<int> C(4, 4);
+    mcf::Mat<int> D(4, 4);
 
     auto f = [](size_t i, size_t j){
         return i + j;
@@ -30,27 +30,22 @@ int main()
     B.gen(f);
 
     // cpu mul
-    executionTime([&](){
-        A.mul(B, C);
-    }, 5);
-    std::cout << std::endl;
+    A.mul(B, C, mcf::TRANSPOSE::BOTH);
 
     // gpu mul
     auto p = ecl::System::getPlatform(0);
-    ecl::Computer video(1, p, ecl::DEVICE::GPU);
+    ecl::Computer video(0, p, ecl::DEVICE::GPU);
 
     video << A << B << D;
-    executionTime([&](){
-        A.mul(B, D, video);
-    }, 5);
+    A.mul(B, D, video, mcf::TRANSPOSE::BOTH);
     video >> D;
 
     // output
-    // std::cout << A << std::endl;
-    // std::cout << B << std::endl;
-    // std::cout << C << std::endl;
-    // std::cout << D;
-    
+    std::cout << A << std::endl;
+    std::cout << B << std::endl;
+    std::cout << C << std::endl;
+    std::cout << D;
+
     A.release(video);
     B.release(video);
     D.release(video);

@@ -20,6 +20,7 @@ namespace mcf{
         void clearFields();
         std::string getTypeName() const;
         void requireMatrixShape(const Mat<T>&, size_t, size_t, const std::string&, bool is_result = false) const;
+        void requireMatrixH(size_t, size_t, const std::string&) const;
         void requireTotalSize(const Mat<T>&, size_t, const std::string&) const;
     public:
         Mat();
@@ -151,6 +152,17 @@ void mcf::Mat<T>::requireMatrixShape(const Mat<T>& X, size_t require_h, size_t r
         throw std::runtime_error(e);
     }
 }
+
+template<typename T>
+void mcf::Mat<T>::requireMatrixH(size_t r_h, size_t require_h, const std::string& where) const{
+    if(r_h != require_h){
+        std::string e = "Require h [" + where + "]: ";
+        e += "wrong matrix h ";
+        e += std::to_string(r_h) + " != " + std::to_string(require_h);
+        throw std::runtime_error(e);
+    }
+}
+
 template<typename T>
 void mcf::Mat<T>::requireTotalSize(const Mat<T>& X, size_t require_total_size, const std::string& where) const{
     size_t r_total_size = X.getTotalSize();
@@ -352,22 +364,21 @@ template<typename T>
 void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
     std::string type = getTypeName();
 
-    ecl::Program temp = "__kernel void gen";
-    temp += "(__global " + type + "* result)";
-    temp += "{\n";
-    temp += "size_t i = get_global_id(0);\n";
-    temp += "size_t j = get_global_id(1);\n";
-    temp += "size_t h = get_global_size(0);\n";
-    temp += "size_t w = get_global_size(1);\n";
-    temp += "size_t index = i * w + j;\n";
-    temp += type + " ret;\n";
-    temp += body + "\n";
-    temp += "result[index] = ret;";
-    temp += "}";
+    ecl::Program prog = "__kernel void gen";
+    prog += "(__global " + type + "* result)";
+    prog += "{\n";
+    prog += "size_t i = get_global_id(0);\n";
+    prog += "size_t j = get_global_id(1);\n";
+    prog += "size_t h = get_global_size(0);\n";
+    prog += "size_t w = get_global_size(1);\n";
+    prog += "size_t index = i * w + j;\n";
+    prog += type + " ret;\n";
+    prog += body + "\n";
+    prog += "result[index] = ret;";
+    prog += "}";
 
     ecl::Kernel gen = "gen";
-
-    video.compute(temp, gen, {&array}, {h, w});
+    video.compute(prog, gen, {&array}, {h, w});
 }
 
 template<typename T>
@@ -431,37 +442,35 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
     if(option == NONE){
         requireMatrixShape(result, h, w, "map", true);
 
-        ecl::Program temp = "__kernel void map";
-        temp += "(__global " + type + "* a, __global " + type + "* result){\n";
-        temp += "size_t index = get_global_id(0);\n";
-        temp += type + " v = a[index];\n";
-        temp += type + " ret;\n";
-        temp += body + "\n";
-        temp += "result[index] = ret;\n";
-        temp += "}";
+        ecl::Program prog = "__kernel void map";
+        prog += "(__global " + type + "* a, __global " + type + "* result){\n";
+        prog += "size_t index = get_global_id(0);\n";
+        prog += type + " v = a[index];\n";
+        prog += type + " ret;\n";
+        prog += body + "\n";
+        prog += "result[index] = ret;\n";
+        prog += "}";
 
         ecl::Kernel map = "map";
-
-        video.compute(temp, map, {&array, &result.array}, {total_size});
+        video.compute(prog, map, {&array, &result.array}, {total_size});
     }
     else{
         requireMatrixShape(result, w, h, "map", true);
 
-        ecl::Program temp = "__kernel void map";
-        temp += "(__global " + type + "* a, __global " + type + "* result)";
-        temp += "{\n";
-        temp += "";
-        temp += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
-        temp += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
-        temp += type + " v = a[index];\n";
-        temp += type + " ret;\n";
-        temp += body + "\n";
-        temp += "result[result_index] = ret;\n";
-        temp += "}";
+        ecl::Program prog = "__kernel void map";
+        prog += "(__global " + type + "* a, __global " + type + "* result)";
+        prog += "{\n";
+        prog += "";
+        prog += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        prog += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
+        prog += type + " v = a[index];\n";
+        prog += type + " ret;\n";
+        prog += body + "\n";
+        prog += "result[result_index] = ret;\n";
+        prog += "}";
 
         ecl::Kernel map = "map";
-
-        video.compute(temp, map, {&array, &result.array}, {w, h});
+        video.compute(prog, map, {&array, &result.array}, {w, h});
     }
 }
 
@@ -509,20 +518,19 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         std::string type = getTypeName();
 
-        ecl::Program temp = "__kernel void transform";
-        temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
-        temp += "{\n";
-        temp += "size_t index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
-        temp += type + " v1 = a[index];\n";
-        temp += type + " v2 = b[index];\n";
-        temp += type + " ret;\n";
-        temp += body + "\n";
-        temp += "result[index] = ret;\n";
-        temp += "}";
+        ecl::Program prog = "__kernel void transform";
+        prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        prog += "{\n";
+        prog += "size_t index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        prog += type + " v1 = a[index];\n";
+        prog += type + " v2 = b[index];\n";
+        prog += type + " ret;\n";
+        prog += body + "\n";
+        prog += "result[index] = ret;\n";
+        prog += "}";
 
         ecl::Kernel transform = "transform";
-
-        video.compute(temp, transform, {&array, &X.array, &result.array}, {h, w});
+        video.compute(prog, transform, {&array, &X.array, &result.array}, {h, w});
 
     }else if(option == FIRST){
         requireMatrixShape(X, w, h, "transform");
@@ -530,21 +538,20 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         std::string type = getTypeName();
 
-        ecl::Program temp = "__kernel void transform";
-        temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
-        temp += "{\n";
-        temp += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
-        temp += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
-        temp += type + " v1 = a[index];\n";
-        temp += type + " v2 = b[result_index];\n";
-        temp += type + " ret;\n";
-        temp += body + "\n";
-        temp += "result[result_index] = ret;\n";
-        temp += "}";
+        ecl::Program prog = "__kernel void transform";
+        prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        prog += "{\n";
+        prog += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        prog += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
+        prog += type + " v1 = a[index];\n";
+        prog += type + " v2 = b[result_index];\n";
+        prog += type + " ret;\n";
+        prog += body + "\n";
+        prog += "result[result_index] = ret;\n";
+        prog += "}";
 
         ecl::Kernel transform = "transform";
-
-        video.compute(temp, transform, {&array, &X.array, &result.array}, {w, h});
+        video.compute(prog, transform, {&array, &X.array, &result.array}, {w, h});
 
     }else if(option == SECOND){
         requireMatrixShape(*this, X.w, X.h, "transform");
@@ -552,42 +559,40 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         std::string type = getTypeName();
 
-        ecl::Program temp = "__kernel void transform";
-        temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
-        temp += "{\n";
-        temp += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
-        temp += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
-        temp += type + " v1 = a[result_index];\n";
-        temp += type + " v2 = b[index];\n";
-        temp += type + " ret;\n";
-        temp += body + "\n";
-        temp += "result[result_index] = ret;\n";
-        temp += "}";
+        ecl::Program prog = "__kernel void transform";
+        prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        prog += "{\n";
+        prog += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        prog += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
+        prog += type + " v1 = a[result_index];\n";
+        prog += type + " v2 = b[index];\n";
+        prog += type + " ret;\n";
+        prog += body + "\n";
+        prog += "result[result_index] = ret;\n";
+        prog += "}";
 
         ecl::Kernel transform = "transform";
-
-        video.compute(temp, transform, {&array, &X.array, &result.array}, {X.w, X.h});
+        video.compute(prog, transform, {&array, &X.array, &result.array}, {X.w, X.h});
     }else{
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, w, h, "transform", true);
 
         std::string type = getTypeName();
 
-        ecl::Program temp = "__kernel void transform";
-        temp += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
-        temp += "{\n";
-        temp += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
-        temp += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
-        temp += type + " v1 = a[index];\n";
-        temp += type + " v2 = b[index];\n";
-        temp += type + " ret;\n";
-        temp += body + "\n";
-        temp += "result[result_index] = ret;\n";
-        temp += "}";
+        ecl::Program prog = "__kernel void transform";
+        prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
+        prog += "{\n";
+        prog += "size_t result_index = get_global_id(0) * get_global_size(1) + get_global_id(1);\n";
+        prog += "size_t index = get_global_id(1) * get_global_size(0) + get_global_id(0);\n";
+        prog += type + " v1 = a[index];\n";
+        prog += type + " v2 = b[index];\n";
+        prog += type + " ret;\n";
+        prog += body + "\n";
+        prog += "result[result_index] = ret;\n";
+        prog += "}";
 
         ecl::Kernel transform = "transform";
-
-        video.compute(temp, transform, {&array, &X.array, &result.array}, {w, h});
+        video.compute(prog, transform, {&array, &X.array, &result.array}, {w, h});
     }
 }
 
@@ -668,21 +673,20 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             std::string type = getTypeName();
 
-            ecl::Program temp = "__kernel void reduce";
-            temp += "(__global " + type + "* a, __global " + type + "* result)";
-            temp += "{\n";
-            temp += "size_t j = get_global_id(0);\n";
-            temp += "size_t w = get_global_size(0);\n";
-            temp += type + " sum = 0;\n";
-            temp += "for(size_t i = 0; i < " + std::to_string(h) + "; i++){\n";
-            temp += "sum += a[i * w + j];\n";
-            temp += "}\n";
-            temp += "result[j] = sum;\n";
-            temp += "}";
+            ecl::Program prog = "__kernel void reduce";
+            prog += "(__global " + type + "* a, __global " + type + "* result)";
+            prog += "{\n";
+            prog += "size_t j = get_global_id(0);\n";
+            prog += "size_t w = get_global_size(0);\n";
+            prog += type + " sum = 0;\n";
+            prog += "for(size_t i = 0; i < " + std::to_string(h) + "; i++){\n";
+            prog += "sum += a[i * w + j];\n";
+            prog += "}\n";
+            prog += "result[j] = sum;\n";
+            prog += "}";
 
             ecl::Kernel reduce = "reduce";
-
-            video.compute(temp, reduce, {&array, &result.array}, {w});
+            video.compute(prog, reduce, {&array, &result.array}, {w});
 
         } else if(option == ROW){
             requireMatrixShape(result, h, 1, "reduce", true);
@@ -690,23 +694,22 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             std::string type = getTypeName();
 
-            ecl::Program temp = "__kernel void reduce";
-            temp += "(__global " + type + "* a, __global " + type + "* result)";
-            temp += "{\n";
-            temp += "size_t i = get_global_id(0);";
-            temp += "size_t h = get_global_size(0);";
-            temp += "size_t w = " + std::to_string(w) + ";";
-            temp += "size_t iw = i * w;\n";
-            temp += type + " sum = 0;\n";
-            temp += "for(size_t j = 0; j < w; j++){\n";
-            temp += "sum += a[iw + j];";
-            temp += "}\n";
-            temp += "result[i] = sum;\n";
-            temp += "}";
+            ecl::Program prog = "__kernel void reduce";
+            prog += "(__global " + type + "* a, __global " + type + "* result)";
+            prog += "{\n";
+            prog += "size_t i = get_global_id(0);";
+            prog += "size_t h = get_global_size(0);";
+            prog += "size_t w = " + std::to_string(w) + ";";
+            prog += "size_t iw = i * w;\n";
+            prog += type + " sum = 0;\n";
+            prog += "for(size_t j = 0; j < w; j++){\n";
+            prog += "sum += a[iw + j];";
+            prog += "}\n";
+            prog += "result[i] = sum;\n";
+            prog += "}";
 
             ecl::Kernel reduce = "reduce";
-
-            video.compute(temp, reduce, {&array, &result.array}, {h});
+            video.compute(prog, reduce, {&array, &result.array}, {h});
         }
     }else{
         if(option == FULL){
@@ -717,21 +720,20 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             std::string type = getTypeName();
 
-            ecl::Program temp = "__kernel void reduce";
-            temp += "(__global " + type + "* a, __global " + type + "* result)";
-            temp += "{\n";
-            temp += "size_t j = get_global_id(0);\n";
-            temp += "size_t w = " + std::to_string(w) + ";\n";
-            temp += type + " sum = 0;\n";
-            temp += "for(size_t i = 0; i < w; i++){\n";
-            temp += "sum += a[j * w + i];\n";
-            temp += "}\n";
-            temp += "result[j] = sum;\n";
-            temp += "}";
+            ecl::Program prog = "__kernel void reduce";
+            prog += "(__global " + type + "* a, __global " + type + "* result)";
+            prog += "{\n";
+            prog += "size_t j = get_global_id(0);\n";
+            prog += "size_t w = " + std::to_string(w) + ";\n";
+            prog += type + " sum = 0;\n";
+            prog += "for(size_t i = 0; i < w; i++){\n";
+            prog += "sum += a[j * w + i];\n";
+            prog += "}\n";
+            prog += "result[j] = sum;\n";
+            prog += "}";
 
             ecl::Kernel reduce = "reduce";
-
-            video.compute(temp, reduce, {&array, &result.array}, {h});
+            video.compute(prog, reduce, {&array, &result.array}, {h});
 
         } else if(option == ROW){
             requireMatrixShape(result, w, 1, "reduce", true);
@@ -739,22 +741,21 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             std::string type = getTypeName();
 
-            ecl::Program temp = "__kernel void reduce";
-            temp += "(__global " + type + "* a, __global " + type + "* result)";
-            temp += "{\n";
-            temp += "size_t i = get_global_id(0);";
-            temp += "size_t h = " + std::to_string(h) + ";";
-            temp += "size_t w = get_global_size(0);";
-            temp += type + " sum = 0;\n";
-            temp += "for(size_t j = 0; j < h; j++){\n";
-            temp += "sum += a[j * w + i];";
-            temp += "}\n";
-            temp += "result[i] = sum;\n";
-            temp += "}";
+            ecl::Program prog = "__kernel void reduce";
+            prog += "(__global " + type + "* a, __global " + type + "* result)";
+            prog += "{\n";
+            prog += "size_t i = get_global_id(0);";
+            prog += "size_t h = " + std::to_string(h) + ";";
+            prog += "size_t w = get_global_size(0);";
+            prog += type + " sum = 0;\n";
+            prog += "for(size_t j = 0; j < h; j++){\n";
+            prog += "sum += a[j * w + i];";
+            prog += "}\n";
+            prog += "result[i] = sum;\n";
+            prog += "}";
 
             ecl::Kernel reduce = "reduce";
-
-            video.compute(temp, reduce, {&array, &result.array}, {w});
+            video.compute(prog, reduce, {&array, &result.array}, {w});
         }
     }
 }
@@ -794,44 +795,102 @@ void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video
 
 template<typename T>
 void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
-    if(option == NONE){
-        requireMatrixShape(result, h, X.w, "mul", true);
-        requireMatrixShape(X, w, X.w, "mul");
+    size_t first_h = h;
+    size_t first_w = w;
+    size_t second_h = X.h;
+    size_t second_w = X.w;
 
-        result.zeros();
+    if (option == FIRST){
+        first_h = w;
+        first_w = h;
+    }else if(option == SECOND){
+        second_h = X.w;
+        second_w = X.h;
+    }else if(option == BOTH){
+        first_h = w;
+        first_w = h;
+        second_h = X.w;
+        second_w = X.h;
+    }
 
+    requireMatrixShape(result, first_h, second_w, "mul", true);
+    requireMatrixH(first_w, second_h, "mul");
+
+    result.zeros();
+
+    if(option == NONE){    
         #pragma omp parallel for
-        for(size_t i = 0; h > i; i++){
-            for(size_t k = 0; X.h > k; k++) {
-                for(size_t j = 0; X.w > j; j++) result[i][j] += getE(i, k) * X.getE(k, j);
-            }
-        }
+        for(size_t i = 0; first_h > i; i++)
+            for(size_t k = 0; first_w > k; k++)
+                for(size_t j = 0; second_w > j; j++)
+                    result[i][j] += getE(i, k) * X.getE(k, j);
+
+    }else if(option == FIRST){
+        #pragma omp parallel for
+        for(size_t i = 0; first_h > i; i++)
+            for(size_t k = 0; first_w > k; k++) 
+                for(size_t j = 0; second_w > j; j++)
+                    result[i][j] += getE(k, i) * X.getE(k, j);
+
+    }else if(option == SECOND){    
+        #pragma omp parallel for
+        for(size_t i = 0; first_h > i; i++)
+            for(size_t j = 0; second_w > j; j++)
+                for(size_t k = 0; first_w > k; k++)
+                    result[i][j] += getE(i, k) * X.getE(j, k);
+    }else{
+        #pragma omp parallel for
+        for(size_t i = 0; first_h > i; i++)
+            for(size_t j = 0; second_w > j; j++)
+                for(size_t k = 0; first_w > k; k++)
+                    result[i][j] += getE(k, i) * X.getE(j, k);
     }
 }
 template<typename T>
 void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
     std::string type = getTypeName();
 
-    if(option == NONE){
-        requireMatrixShape(result, h, X.w, "mul", true);
-        requireMatrixShape(X, w, X.w, "mul");
+    size_t first_h = h;
+    size_t first_w = w;
+    size_t second_h = X.h;
+    size_t second_w = X.w;
 
-        ecl::Program prog = "__kernel void mul";
-        prog += "(__global " + type + "* a, __global " + type + "* b, __global " + type + "* result)";
-        prog += "{\n";
-        prog += "size_t i = get_global_id(0);\n";
-        prog += "size_t j = get_global_id(1);\n";
-        prog += "size_t w = get_global_size(1);\n";
-        prog += type + " sum = 0;\n";
-        prog += "for(size_t k = 0; k < " + std::to_string(X.h) + "; k++) ";
-        prog += "sum += a[i * " + std::to_string(w) + " + k] * b[k * w + j];\n";
-        prog += "result[i * w + j] = sum;\n";
-        prog += "}";
+    std::string mul_optimized = "a[i * " + std::to_string(w) + " + k] * b[k * " + std::to_string(X.w) + " + j];";
 
-        ecl::Kernel kern = "mul";
-
-        video.compute(prog, kern, {&array, &X.array, &result.array}, {h, X.w});
+    if (option == FIRST){
+        first_h = w;
+        first_w = h;
+        mul_optimized = "a[k * " + std::to_string(w) + " + i] * b[k * " + std::to_string(X.w) + " + j];";
+    }else if(option == SECOND){
+        second_h = X.w;
+        second_w = X.h;
+        mul_optimized = "a[i * " + std::to_string(w) + " + k] * b[j * " + std::to_string(X.w) + " + k];";
+    }else if(option == BOTH){
+        first_h = w;
+        first_w = h;
+        second_h = X.w;
+        second_w = X.h;
+        mul_optimized = "a[k * " + std::to_string(w) + " + i] * b[j * " + std::to_string(X.w) + " + k];";
     }
+
+    requireMatrixShape(result, first_h, second_w, "mul", true);
+    requireMatrixH(first_w, second_h, "mul");
+
+
+    ecl::Program prog = "__kernel void mul";
+    prog += "(__global " + type +  "* a, __global " + type + "* b, __global " + type + "* result)";
+    prog += "{\n";
+    prog += "size_t i = get_global_id(0);\n";
+    prog += "size_t j = get_global_id(1);\n";
+    prog += "size_t w = get_global_size(1);\n";
+    prog += type + " sum = 0;\n";
+    prog += "for(size_t k = 0; k < " + std::to_string(first_w) + "; k++) ";
+    prog += "sum += " + mul_optimized + "\n";
+    prog += "result[i * w + j] = sum;\n";
+    prog += "}";
+
+    ecl::Kernel kern = "mul";
+    video.compute(prog, kern, {&array, &X.array, &result.array}, {first_h, second_w});
 }
 
 
