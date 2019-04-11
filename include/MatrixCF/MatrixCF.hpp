@@ -2,7 +2,10 @@
 
 #include <functional>
 #include <omp.h>
+#include <iomanip>
+
 #include "EasyCL.hpp"
+#include "json.hpp"
 
 namespace mcf{
     using namespace ecl;
@@ -54,6 +57,9 @@ namespace mcf{
         void receive(Computer&);
         void release(Computer&);
         void grab(Computer&);
+
+        void save(const std::string&) const;
+        static Mat<T> load(const std::string&);
 
         template<typename U>
         friend std::ostream& operator<<(std::ostream&, const Mat<U>&);
@@ -342,6 +348,37 @@ void mcf::Mat<T>::release(Computer& video){
 template<typename T>
 void mcf::Mat<T>::grab(Computer& video){
     video.grab({&h, &w, &array});
+}
+
+template<typename T>
+void mcf::Mat<T>::save(const std::string& json_filename) const{
+    std::ofstream f(json_filename);
+    if(!f.is_open()) throw std::runtime_error("unable to save matrix to json file");
+
+    auto j = nlohmann::json();
+    j["w"] = static_cast<size_t>(w);
+    j["h"] = static_cast<size_t>(h);
+    j["total_size"] = static_cast<size_t>(total_size);
+    j["array"] = std::vector<T>(static_cast<const T*>(array), array + total_size);
+
+    f << std::setw(4) << j;
+    f.close();
+}
+template<typename T>
+mcf::Mat<T> mcf::Mat<T>::load(const std::string& json_filename){
+    std::ifstream f(json_filename);
+        if(!f.is_open()) throw std::runtime_error("unable to load matrix to json file");
+
+        auto j = nlohmann::json::parse(f);
+        T* temp = new T[(size_t)j["total_size"]];
+        std::copy(j["array"].begin(), j["array"].end(), temp);
+
+        Mat<T> result(temp, j["h"], j["w"]);
+        result.requireTotalSize(result, j["total_size"], "load");
+
+        f.close();
+
+        return std::move(result);
 }
 
 namespace mcf{
