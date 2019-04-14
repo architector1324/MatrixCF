@@ -29,7 +29,7 @@ int main()
     std::cout << B << std::endl;
     std::cout << C;
 
-    ecl::System::free();
+    ecl::System::release();
     
     return 0;
 }

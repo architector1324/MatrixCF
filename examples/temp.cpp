@@ -45,7 +45,7 @@ int main()
 
     std::cout << A.equals(B) << std::endl;
 
-    ecl::System::free();
+    ecl::System::release();
 
     return 0;
 }

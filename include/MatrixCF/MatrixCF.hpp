@@ -457,7 +457,9 @@ void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
     prog += "}";
 
     ecl::Kernel gen = "gen";
-    video.compute(prog, gen, {&array}, {h, w});
+
+    ecl::Frame frame = {prog, gen, {&array}};
+    video.grid(frame, {h, w});
 }
 
 template<typename T>
@@ -538,7 +540,9 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video)
     prog += "}";
 
     ecl::Kernel hstack = "hstack";
-    video.compute(prog, hstack, {&A.array, &B.array, &array}, {h, w});
+
+    ecl::Frame frame = {prog, hstack, {&A.array, &B.array, &array}};
+    video.grid(frame, {h, w});
 }
 
 template<typename T>
@@ -575,7 +579,9 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video)
     prog += "}";
 
     ecl::Kernel vstack = "vstack";
-    video.compute(prog, vstack, {&A.array, &B.array, &array}, {h, w});
+
+    ecl::Frame frame = {prog, vstack, {&A.array, &B.array, &array}};
+    video.grid(frame, {h, w});
 }
 
 template<typename T>
@@ -632,7 +638,9 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
         prog += "}";
 
         ecl::Kernel map = "map";
-        video.compute(prog, map, {&array, &result.array}, {total_size});
+
+        ecl::Frame frame = {prog, map, {&array, &result.array}};
+        video.grid(frame, {total_size});
     }
     else{
         requireMatrixShape(result, w, h, "map", true);
@@ -650,7 +658,9 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
         prog += "}";
 
         ecl::Kernel map = "map";
-        video.compute(prog, map, {&array, &result.array}, {w, h});
+
+        ecl::Frame frame = {prog, map, {&array, &result.array}};
+        video.grid(frame, {w, h});
     }
 }
 
@@ -710,7 +720,9 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         prog += "}";
 
         ecl::Kernel transform = "transform";
-        video.compute(prog, transform, {&array, &X.array, &result.array}, {h, w});
+
+        ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
+        video.grid(frame, {h, w});
 
     }else if(option == FIRST){
         requireMatrixShape(X, w, h, "transform");
@@ -731,7 +743,9 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         prog += "}";
 
         ecl::Kernel transform = "transform";
-        video.compute(prog, transform, {&array, &X.array, &result.array}, {w, h});
+
+        ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
+        video.grid(frame, {w, h});
 
     }else if(option == SECOND){
         requireMatrixShape(*this, X.w, X.h, "transform");
@@ -752,7 +766,9 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         prog += "}";
 
         ecl::Kernel transform = "transform";
-        video.compute(prog, transform, {&array, &X.array, &result.array}, {X.w, X.h});
+
+        ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
+        video.grid(frame, {X.w, X.h});
     }else{
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, w, h, "transform", true);
@@ -772,7 +788,9 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         prog += "}";
 
         ecl::Kernel transform = "transform";
-        video.compute(prog, transform, {&array, &X.array, &result.array}, {w, h});
+
+        ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
+        video.grid(frame, {w, h});
     }
 }
 
@@ -866,7 +884,9 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             prog += "}";
 
             ecl::Kernel reduce = "reduce";
-            video.compute(prog, reduce, {&array, &result.array}, {w});
+
+            ecl::Frame frame = {prog, reduce, {&array, &result.array}};
+            video.grid(frame, {w});
 
         } else if(option == ROW){
             requireMatrixShape(result, h, 1, "reduce", true);
@@ -889,7 +909,9 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             prog += "}";
 
             ecl::Kernel reduce = "reduce";
-            video.compute(prog, reduce, {&array, &result.array}, {h});
+
+            ecl::Frame frame = {prog, reduce, {&array, &result.array}};
+            video.grid(frame, {h});
         }
     }else{
         if(option == FULL){
@@ -913,7 +935,9 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             prog += "}";
 
             ecl::Kernel reduce = "reduce";
-            video.compute(prog, reduce, {&array, &result.array}, {h});
+
+            ecl::Frame frame = {prog, reduce, {&array, &result.array}};
+            video.grid(frame, {h});
 
         } else if(option == ROW){
             requireMatrixShape(result, w, 1, "reduce", true);
@@ -935,7 +959,9 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             prog += "}";
 
             ecl::Kernel reduce = "reduce";
-            video.compute(prog, reduce, {&array, &result.array}, {w});
+
+            ecl::Frame frame = {prog, reduce, {&array, &result.array}};
+            video.grid(frame, {w});
         }
     }
 }
@@ -1070,7 +1096,9 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRA
     prog += "}";
 
     ecl::Kernel mul = "mul";
-    video.compute(prog, mul, {&array, &X.array, &result.array}, {first_h, second_w});
+
+    ecl::Frame frame = {prog, mul, {&array, &X.array, &result.array}};
+    video.grid(frame, {first_h, second_w});
 }
 
 template<typename T>
@@ -1118,7 +1146,9 @@ void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video) const{
     prog += "}";
 
     ecl::Kernel hsplit = "hsplit";
-    video.compute(prog, hsplit, {&A.array, &B.array, &array}, {h, w});
+
+    ecl::Frame frame = {prog, hsplit, {&A.array, &B.array, &array}};
+    video.grid(frame, {h, w});
 }
 
 template<typename T>
@@ -1155,7 +1185,9 @@ void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video) const{
     prog += "}";
 
     ecl::Kernel vsplit = "vsplit";
-    video.compute(prog, vsplit, {&A.array, &B.array, &array}, {h, w});
+
+    ecl::Frame frame = {prog, vsplit, {&A.array, &B.array, &array}};
+    video.grid(frame, {h, w});
 }
 
 

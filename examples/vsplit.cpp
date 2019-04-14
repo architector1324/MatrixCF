@@ -34,7 +34,7 @@ int main()
     std::cout << D << std::endl;
     std::cout << E << std::endl;
 
-    ecl::System::free();
+    ecl::System::release();
 
     return 0;
 }

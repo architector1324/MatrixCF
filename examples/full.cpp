@@ -21,7 +21,7 @@ int main()
     std::cout << A << std::endl;
     std::cout << B;
 
-    ecl::System::free();
+    ecl::System::release();
     
     return 0;
 }
