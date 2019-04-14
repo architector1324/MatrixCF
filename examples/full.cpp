@@ -21,7 +21,6 @@ int main()
     std::cout << A << std::endl;
     std::cout << B;
 
-    B.release(video);
     ecl::System::free();
     
     return 0;

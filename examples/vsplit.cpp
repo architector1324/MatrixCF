@@ -34,9 +34,6 @@ int main()
     std::cout << D << std::endl;
     std::cout << E << std::endl;
 
-    A.release(video);
-    D.release(video);
-    E.release(video);
     ecl::System::free();
 
     return 0;

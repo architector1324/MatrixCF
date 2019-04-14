@@ -29,9 +29,7 @@ int main()
     std::cout << C << std::endl;
     std::cout << D;
 
-    A.release(video);
-    B.release(video);
-    D.release(video);
+    ecl::System::free();
     
     return 0;
 }
