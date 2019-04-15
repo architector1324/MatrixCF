@@ -53,10 +53,10 @@ namespace mcf{
         operator T*();
         operator const T*() const;
 
-        void send(Computer&);
-        void receive(Computer&);
-        void release(Computer&);
-        void grab(Computer&);
+        void send(Computer&, EXEC sync = SYNC);
+        void receive(Computer&, EXEC sync = SYNC);
+        void release(Computer&, EXEC sync = SYNC);
+        void grab(Computer&, EXEC sync = SYNC);
 
         void save(const std::string&) const;
         static Mat<T> load(const std::string&);
@@ -76,63 +76,63 @@ namespace mcf{
 
         // methods (mutable)
         void gen(const std::function<T(size_t, size_t)>&);
-        void gen(const std::string&, Computer&);
+        void gen(const std::string&, Computer&, EXEC sync = SYNC);
 
         void full(const T&);
-        void full(const T&, Computer&);
+        void full(const T&, Computer&, EXEC sync = SYNC);
 
         void zeros();
-        void zeros(Computer&);
+        void zeros(Computer&, EXEC sync = SYNC);
 
         void ones();
-        void ones(Computer&);
+        void ones(Computer&, EXEC sync = SYNC);
 
         void eye(const T& value = T(1));
-        void eye(const T& value, Computer&);
+        void eye(const T& value, Computer&, EXEC sync = SYNC);
 
         void hstack(const Mat<T>&, const Mat<T>&);
-        void hstack(const Mat<T>&, const Mat<T>&, Computer&);
+        void hstack(const Mat<T>&, const Mat<T>&, Computer&, EXEC sync = SYNC);
 
         void vstack(const Mat<T>&, const Mat<T>&);
-        void vstack(const Mat<T>&, const Mat<T>&, Computer&);
+        void vstack(const Mat<T>&, const Mat<T>&, Computer&, EXEC sync = SYNC);
 
         void cpy(const Mat<T>&);
         void view(Mat<T>&);
         
         // higher-order methods (immutable)
         void map(const std::function<T(const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void map(const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
+        void map(const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
 
         void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
+        void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
 
         // methods (immutable)
         void transpose(Mat<T>&) const;
-        void transpose(Mat<T>&, Computer&) const;
+        void transpose(Mat<T>&, Computer&, EXEC sync = SYNC) const;
 
         void reduce(Mat<T>&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
-        void reduce(Mat<T>&, Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
+        void reduce(Mat<T>&, Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE, EXEC sync = SYNC) const;
 
         void add(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void add(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
+        void add(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
 
         void sub(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void sub(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
+        void sub(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
 
         void hadamard(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void hadamard(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
+        void hadamard(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
 
         void mul(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void mul(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
+        void mul(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
 
         void mul(const T&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void mul(const T&, Mat<T>&, Computer&, TRANSPOSE option = NONE) const;
+        void mul(const T&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
 
         void hsplit(Mat<T>&, Mat<T>&) const;
-        void hsplit(Mat<T>&, Mat<T>&, Computer&) const;
+        void hsplit(Mat<T>&, Mat<T>&, Computer&, EXEC sync = SYNC) const;
 
         void vsplit(Mat<T>&, Mat<T>&) const;
-        void vsplit(Mat<T>&, Mat<T>&, Computer&) const;
+        void vsplit(Mat<T>&, Mat<T>&, Computer&, EXEC sync = SYNC) const;
 
         ~Mat();
     };
@@ -334,20 +334,20 @@ mcf::Mat<T>::operator const T*() const{
 }
 
 template<typename T>
-void mcf::Mat<T>::send(Computer& video){
-    video << h << w << array;
+void mcf::Mat<T>::send(Computer& video, EXEC sync){
+    video.send(array, sync);
 }
 template<typename T>
-void mcf::Mat<T>::receive(Computer& video){
-    video >> array;
+void mcf::Mat<T>::receive(Computer& video, EXEC sync){
+    video.receive(array, sync);
 }
 template<typename T>
-void mcf::Mat<T>::release(Computer& video){
-    video.release({&h, &w, &array});
+void mcf::Mat<T>::release(Computer& video, EXEC sync){
+    video.release(array, sync);
 }
 template<typename T>
-void mcf::Mat<T>::grab(Computer& video){
-    video.grab({&h, &w, &array});
+void mcf::Mat<T>::grab(Computer& video, EXEC sync){
+    video.grab(array, sync);
 }
 
 template<typename T>
@@ -440,7 +440,7 @@ void mcf::Mat<T>::gen(const std::function<T(size_t, size_t)>& f){
     }
 }
 template<typename T>
-void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
+void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video, EXEC sync){
     std::string type = getTypeName();
 
     ecl::Program prog = "__kernel void gen";
@@ -459,7 +459,7 @@ void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video){
     ecl::Kernel gen = "gen";
 
     ecl::Frame frame = {prog, gen, {&array}};
-    video.grid(frame, {h, w});
+    video.grid(frame, {h, w}, sync);
 }
 
 template<typename T>
@@ -469,9 +469,9 @@ void mcf::Mat<T>::full(const T& value){
     });
 }
 template<typename T>
-void mcf::Mat<T>::full(const T& value, ecl::Computer& video){
+void mcf::Mat<T>::full(const T& value, ecl::Computer& video, EXEC sync){
     std::string val = std::to_string(value);
-    gen("ret = " + val + ";", video);
+    gen("ret = " + val + ";", video, sync);
 }
 template<typename T>
 void mcf::Mat<T>::zeros(){
@@ -480,8 +480,8 @@ void mcf::Mat<T>::zeros(){
     });
 }
 template<typename T>
-void mcf::Mat<T>::zeros(ecl::Computer& video){
-    gen("ret = 0;", video);
+void mcf::Mat<T>::zeros(ecl::Computer& video, EXEC sync){
+    gen("ret = 0;", video, sync);
 }
 
 template<typename T>
@@ -491,8 +491,8 @@ void mcf::Mat<T>::ones(){
     });
 }
 template<typename T>
-void mcf::Mat<T>::ones(ecl::Computer& video){
-    gen("ret = 1;", video);
+void mcf::Mat<T>::ones(ecl::Computer& video, EXEC sync){
+    gen("ret = 1;", video, sync);
 }
 
 template<typename T>
@@ -502,9 +502,9 @@ void mcf::Mat<T>::eye(const T& value){
     });
 }
 template<typename T>
-void mcf::Mat<T>::eye(const T& value, ecl::Computer& video){
+void mcf::Mat<T>::eye(const T& value, ecl::Computer& video, EXEC sync){
     std::string val = std::to_string(value);
-    gen("ret = i == j ? + " + val + " : 0;", video);
+    gen("ret = i == j ? + " + val + " : 0;", video, sync);
 }
 
 template<typename T>
@@ -521,7 +521,7 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B){
     }
 }
 template<typename T>
-void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video){
+void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video, EXEC sync){
     std::string type = getTypeName();
 
     requireMatrixH(A.h, B.h, "hstack");
@@ -542,7 +542,7 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video)
     ecl::Kernel hstack = "hstack";
 
     ecl::Frame frame = {prog, hstack, {&A.array, &B.array, &array}};
-    video.grid(frame, {h, w});
+    video.grid(frame, {h, w}, sync);
 }
 
 template<typename T>
@@ -559,7 +559,7 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B){
     }
 }
 template<typename T>
-void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video){
+void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video, EXEC sync){
     std::string type = getTypeName();
 
     requireMatrixH(A.w, B.w, "vstack");
@@ -581,7 +581,7 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video)
     ecl::Kernel vstack = "vstack";
 
     ecl::Frame frame = {prog, vstack, {&A.array, &B.array, &array}};
-    video.grid(frame, {h, w});
+    video.grid(frame, {h, w}, sync);
 }
 
 template<typename T>
@@ -621,7 +621,7 @@ void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result, 
     }
 }
 template<typename T>
-void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const
+void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const
 {
     std::string type = getTypeName();
 
@@ -640,7 +640,7 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
         ecl::Kernel map = "map";
 
         ecl::Frame frame = {prog, map, {&array, &result.array}};
-        video.grid(frame, {total_size});
+        video.grid(frame, {total_size}, sync);
     }
     else{
         requireMatrixShape(result, w, h, "map", true);
@@ -660,7 +660,7 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
         ecl::Kernel map = "map";
 
         ecl::Frame frame = {prog, map, {&array, &result.array}};
-        video.grid(frame, {w, h});
+        video.grid(frame, {w, h}, sync);
     }
 }
 
@@ -701,7 +701,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
     }
 }
 template<typename T>
-void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
     if(option == NONE){
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, h, w, "transform", true);
@@ -722,7 +722,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         ecl::Kernel transform = "transform";
 
         ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
-        video.grid(frame, {h, w});
+        video.grid(frame, {h, w}, sync);
 
     }else if(option == FIRST){
         requireMatrixShape(X, w, h, "transform");
@@ -745,7 +745,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         ecl::Kernel transform = "transform";
 
         ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
-        video.grid(frame, {w, h});
+        video.grid(frame, {w, h}, sync);
 
     }else if(option == SECOND){
         requireMatrixShape(*this, X.w, X.h, "transform");
@@ -768,7 +768,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         ecl::Kernel transform = "transform";
 
         ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
-        video.grid(frame, {X.w, X.h});
+        video.grid(frame, {X.w, X.h}, sync);
     }else{
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, w, h, "transform", true);
@@ -790,7 +790,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
         ecl::Kernel transform = "transform";
 
         ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
-        video.grid(frame, {w, h});
+        video.grid(frame, {w, h}, sync);
     }
 }
 
@@ -802,8 +802,8 @@ void mcf::Mat<T>::transpose(Mat<T>& result) const{
     }, result, FIRST);
 }
 template<typename T>
-void mcf::Mat<T>::transpose(Mat<T>& result, Computer& video) const{
-    map("ret = v;", result, video, FIRST);
+void mcf::Mat<T>::transpose(Mat<T>& result, Computer& video, EXEC sync) const{
+    map("ret = v;", result, video, FIRST, sync);
 }
 
 template<typename T>
@@ -861,7 +861,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
     }
 }
 template<typename T>
-void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TRANSPOSE transpose_option) const{
+void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TRANSPOSE transpose_option, EXEC sync) const{
     if(transpose_option == NONE){
         if(option == FULL){
             throw std::runtime_error("full reduce on computer temporary unavailable");
@@ -886,7 +886,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             ecl::Kernel reduce = "reduce";
 
             ecl::Frame frame = {prog, reduce, {&array, &result.array}};
-            video.grid(frame, {w});
+            video.grid(frame, {w}, sync);
 
         } else if(option == ROW){
             requireMatrixShape(result, h, 1, "reduce", true);
@@ -911,7 +911,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             ecl::Kernel reduce = "reduce";
 
             ecl::Frame frame = {prog, reduce, {&array, &result.array}};
-            video.grid(frame, {h});
+            video.grid(frame, {h}, sync);
         }
     }else{
         if(option == FULL){
@@ -937,7 +937,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             ecl::Kernel reduce = "reduce";
 
             ecl::Frame frame = {prog, reduce, {&array, &result.array}};
-            video.grid(frame, {h});
+            video.grid(frame, {h}, sync);
 
         } else if(option == ROW){
             requireMatrixShape(result, w, 1, "reduce", true);
@@ -961,7 +961,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             ecl::Kernel reduce = "reduce";
 
             ecl::Frame frame = {prog, reduce, {&array, &result.array}};
-            video.grid(frame, {w});
+            video.grid(frame, {w}, sync);
         }
     }
 }
@@ -973,8 +973,8 @@ void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
-    transform(X, "ret = v1 + v2;", result, video, option);
+void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
+    transform(X, "ret = v1 + v2;", result, video, option, sync);
 }
 
 template<typename T>
@@ -984,8 +984,8 @@ void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
-    transform(X, "ret = v1 - v2;", result, video, option);
+void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
+    transform(X, "ret = v1 - v2;", result, video, option, sync);
 }
 
 template<typename T>
@@ -995,8 +995,8 @@ void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) co
     }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
-    transform(X, "ret = v1 * v2;", result, video, option);
+void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
+    transform(X, "ret = v1 * v2;", result, video, option, sync);
 }
 
 template<typename T>
@@ -1053,7 +1053,7 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     }
 }
 template<typename T>
-void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option) const{
+void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
     std::string type = getTypeName();
 
     size_t first_h = h;
@@ -1098,7 +1098,7 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRA
     ecl::Kernel mul = "mul";
 
     ecl::Frame frame = {prog, mul, {&array, &X.array, &result.array}};
-    video.grid(frame, {first_h, second_w});
+    video.grid(frame, {first_h, second_w}, sync);
 }
 
 template<typename T>
@@ -1108,9 +1108,9 @@ void mcf::Mat<T>::mul(const T& value, Mat<T>& result, TRANSPOSE option) const{
     }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::mul(const T& value, Mat<T>& result, Computer& video, TRANSPOSE option) const{
+void mcf::Mat<T>::mul(const T& value, Mat<T>& result, Computer& video, TRANSPOSE option, EXEC sync) const{
     std::string val = std::to_string(value);
-    map("ret = v * " + val + ";", result, video, option);
+    map("ret = v * " + val + ";", result, video, option, sync);
 }
 
 template<typename T>
@@ -1127,7 +1127,7 @@ void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B) const{
     }
 }
 template<typename T>
-void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video) const{
+void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, EXEC sync) const{
     std::string type = getTypeName();
 
     requireMatrixH(A.h, B.h, "hsplit");
@@ -1148,7 +1148,7 @@ void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video) const{
     ecl::Kernel hsplit = "hsplit";
 
     ecl::Frame frame = {prog, hsplit, {&A.array, &B.array, &array}};
-    video.grid(frame, {h, w});
+    video.grid(frame, {h, w}, sync);
 }
 
 template<typename T>
@@ -1165,7 +1165,7 @@ void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B) const{
     }
 }
 template<typename T>
-void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video) const{
+void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, EXEC sync) const{
     std::string type = getTypeName();
 
     requireMatrixH(A.w, B.w, "vsplit");
@@ -1187,7 +1187,7 @@ void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video) const{
     ecl::Kernel vsplit = "vsplit";
 
     ecl::Frame frame = {prog, vsplit, {&A.array, &B.array, &array}};
-    video.grid(frame, {h, w});
+    video.grid(frame, {h, w}, sync);
 }
 
 
