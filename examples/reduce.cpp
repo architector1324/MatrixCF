@@ -13,14 +13,14 @@ int main()
     });
 
     // cpu
-    A.reduce(B, mcf::REDUCE::ROW, mcf::TRANSPOSE::FIRST);
+    A.reduce(B, mcf::REDUCE::COLUMNS, mcf::TRANSPOSE::FIRST);
 
     // gpu
     auto p = ecl::System::getPlatform(0);
     ecl::Computer video(0, p, ecl::DEVICE::GPU);
 
     video << A << C;
-    A.reduce(C, video, mcf::REDUCE::ROW, mcf::TRANSPOSE::FIRST);
+    A.reduce(C, video, mcf::REDUCE::COLUMNS, mcf::TRANSPOSE::FIRST);
     video >> C;
     
     // output

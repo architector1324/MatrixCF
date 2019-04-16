@@ -10,7 +10,7 @@
 namespace mcf{
     using namespace ecl;
 
-    enum REDUCE {FULL, COLUMN, ROW};
+    enum REDUCE {FULL, COLUMNS, ROWS};
     enum TRANSPOSE {NONE, FIRST, SECOND, BOTH};
 
     template<typename T>
@@ -817,7 +817,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             result.zeros();
 
             for(size_t i = 0; total_size > i; i++) result[0][0] += array[i];
-        }else if(option == COLUMN){
+        }else if(option == ROWS){
             requireMatrixShape(result, 1, w, "reduce", true);
             result.zeros();
 
@@ -825,7 +825,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             for(size_t j = 0; w > j; j++){
                 for(size_t i = 0; h > i; i++) result[0][j] += getE(i, j);
             }
-        } else if(option == ROW){
+        } else if(option == COLUMNS){
             requireMatrixShape(result, h, 1, "reduce", true);
             result.zeros();
 
@@ -843,7 +843,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             for(size_t j = 0; h > j; j++){
                 for(size_t i = 0; w > i; i++) result[0][0] += getE(j, i);
             }
-        }else if(option == COLUMN){
+        }else if(option == ROWS){
             requireMatrixShape(result, 1, h, "reduce", true);
             result.zeros();
 
@@ -851,7 +851,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             for(size_t j = 0; h > j; j++){
                 for(size_t i = 0; w > i; i++) result[0][j] += getE(j, i);
             }
-        } else if(option == ROW){
+        } else if(option == COLUMNS){
             requireMatrixShape(result, w, 1, "reduce", true);
             result.zeros();
 
@@ -867,7 +867,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
     if(transpose_option == NONE){
         if(option == FULL){
             throw std::runtime_error("full reduce on computer temporary unavailable");
-        }else if(option == COLUMN){
+        }else if(option == ROWS){
             requireMatrixShape(result, 1, w, "reduce", true);
             result.zeros(video);
 
@@ -890,7 +890,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             ecl::Frame frame = {prog, reduce, {&array, &result.array}};
             video.grid(frame, {w}, sync);
 
-        } else if(option == ROW){
+        } else if(option == COLUMNS){
             requireMatrixShape(result, h, 1, "reduce", true);
             result.zeros(video);
 
@@ -918,7 +918,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
     }else{
         if(option == FULL){
             throw std::runtime_error("full reduce on computer temporary unavailable");
-        }else if(option == COLUMN){
+        }else if(option == ROWS){
             requireMatrixShape(result, 1, h, "reduce", true);
             result.zeros(video);
 
@@ -941,7 +941,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             ecl::Frame frame = {prog, reduce, {&array, &result.array}};
             video.grid(frame, {h}, sync);
 
-        } else if(option == ROW){
+        } else if(option == COLUMNS){
             requireMatrixShape(result, w, 1, "reduce", true);
             result.zeros(video);
 
