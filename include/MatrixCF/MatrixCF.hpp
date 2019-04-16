@@ -16,7 +16,7 @@ namespace mcf{
     template<typename T>
     class Mat{
     private:
-        Variable<size_t> h, w, total_size;
+        size_t h, w, total_size;
         Array<T> array;
         Variable<bool> ref;
 
@@ -39,9 +39,9 @@ namespace mcf{
         Array<T>& getArray();
 
         const Array<T>& getConstArray() const;
-        const Variable<size_t>& getH() const;
-        const Variable<size_t>& getW() const;
-        const Variable<size_t>& getTotalSize() const;
+        const size_t getH() const;
+        const size_t getW() const;
+        const size_t getTotalSize() const;
 
         size_t totalMemoryUsed() const;
         bool isRef() const;
@@ -284,15 +284,15 @@ const mcf::Array<T>& mcf::Mat<T>::getConstArray() const{
     return array;
 }
 template<typename T>
-const mcf::Variable<size_t>& mcf::Mat<T>::getH() const{
+const size_t mcf::Mat<T>::getH() const{
     return h;
 }
 template<typename T>
-const mcf::Variable<size_t>& mcf::Mat<T>::getW() const{
+const size_t mcf::Mat<T>::getW() const{
     return w;
 }
 template<typename T>
-const mcf::Variable<size_t>& mcf::Mat<T>::getTotalSize() const{
+const size_t mcf::Mat<T>::getTotalSize() const{
     return total_size;
 }
 
