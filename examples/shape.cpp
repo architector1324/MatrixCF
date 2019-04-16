@@ -20,7 +20,7 @@ int main()
     A.ravel();
     std::cout << A << std::endl;
 
-    A.ravel(true);
+    A.ravel(mcf::RAVEL::COLUMN);
     std::cout << A;
 
     return 0;

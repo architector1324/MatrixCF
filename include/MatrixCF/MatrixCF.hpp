@@ -10,6 +10,7 @@
 namespace mcf{
     using namespace ecl;
 
+    enum RAVEL {ROW, COLUMN};
     enum REDUCE {FULL, COLUMNS, ROWS};
     enum TRANSPOSE {NONE, FIRST, SECOND, BOTH};
 
@@ -72,7 +73,7 @@ namespace mcf{
         bool equals(const Mat<T>&) const;
 
         void reshape(size_t, size_t);
-        void ravel(bool is_column = false);
+        void ravel(RAVEL option = ROW);
 
         // methods (mutable)
         void gen(const std::function<T(size_t, size_t)>&);
@@ -428,8 +429,8 @@ void mcf::Mat<T>::reshape(size_t new_h, size_t new_w){
     w = new_w;
 }
 template<typename T>
-void mcf::Mat<T>::ravel(bool is_column){
-    if(is_column) reshape(total_size, 1);
+void mcf::Mat<T>::ravel(mcf::RAVEL option){
+    if(option == COLUMN) reshape(total_size, 1);
     else reshape(1, total_size);
 }
 
