@@ -113,6 +113,8 @@ namespace mcf{
         void reduce(Mat<T>&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
         void reduce(Mat<T>&, Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE, EXEC sync = SYNC) const;
 
+        T reduce() const;
+
         void add(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void add(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
 
@@ -964,6 +966,15 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
             video.grid(frame, {w}, sync);
         }
     }
+}
+
+template<typename T>
+T mcf::Mat<T>::reduce() const{
+    T result = 0;
+
+    for(size_t i = 0; i < total_size; i++) result += array[i];
+
+    return result;
 }
 
 template<typename T>

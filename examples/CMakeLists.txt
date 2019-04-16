@@ -1,6 +1,7 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 3.7...3.13)
 
 matrixcf_add_example(serialization serialization.cpp)
+matrixcf_add_example(full_reduce full_reduce.cpp)
 matrixcf_add_example(mul_value mul_value.cpp)
 matrixcf_add_example(transform transform.cpp)
 matrixcf_add_example(transpose transpose.cpp)
