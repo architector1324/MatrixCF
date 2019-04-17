@@ -1,5 +1,10 @@
 #pragma once
 
+#ifndef _WIN32
+#define MATRIXCF_USE_OPENMP
+#endif // _WIN32
+
+
 #include <functional>
 #include <omp.h>
 #include <iomanip>
@@ -437,7 +442,9 @@ void mcf::Mat<T>::ravel(mcf::RAVEL option){
 // methods (mutable)
 template<typename T>
 void mcf::Mat<T>::gen(const std::function<T(size_t, size_t)>& f){
-    // #pragma omp parallel for collapse(2)
+	#ifdef MATRIXCF_USE_OPENMP
+	#pragma omp parallel for collapse(2)
+	#endif 
     for(size_t i = 0; h > i; i++){
         for(size_t j = 0; w > j; j++) setE(f(i, j), i, j);
     }
@@ -515,7 +522,9 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B){
     requireMatrixH(A.h, B.h, "hstack");
     requireMatrixShape(*this, A.h, A.w + B.w, "hstack", true);
 
-    // #pragma omp parallel for collapse(2)
+	#ifdef MATRIXCF_USE_OPENMP
+	#pragma omp parallel for collapse(2)
+	#endif
     for(size_t i = 0; h > i; i++){
         for(size_t j = 0; w > j; j++){
             if(A.w > j) setE(A.getE(i, j), i, j);
@@ -553,7 +562,9 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B){
     requireMatrixH(A.w, B.w, "vstack");
     requireMatrixShape(*this, A.h + B.h, A.w, "vstack", true);
 
-    // #pragma omp parallel for collapse(2)
+	#ifdef MATRIXCF_USE_OPENMP
+	#pragma omp parallel for collapse(2)
+	#endif
     for(size_t i = 0; h > i; i++){
         for(size_t j = 0; w > j; j++){
             if(A.h > i) setE(A.getE(i, j), i, j);
@@ -591,7 +602,9 @@ template<typename T>
 void mcf::Mat<T>::cpy(const Mat<T>& X){
     requireMatrixShape(X, h, w, "cpy");
 
-    // #pragma omp parallel for collapse(2)
+	#ifdef MATRIXCF_USE_OPENMP
+	#pragma omp parallel for collapse(2)
+	#endif
     for(size_t i = 0; h > i; i++)
         for(size_t j = 0; w > j; j++) setE(X.getE(i, j), i, j);
 }
@@ -611,13 +624,17 @@ void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result, 
     if(option == NONE){
         requireMatrixShape(result, h, w, "map", true);
 
-        // #pragma omp parallel for
+		#ifdef MATRIXCF_USE_OPENMP
+		#pragma omp parallel for
+		#endif
         for(size_t i = 0; total_size > i; i++) result.array[i] = f(array[i]);
     }
     else{
         requireMatrixShape(result, w, h, "map", true);
 
-        // #pragma omp parallel for collapse(2)
+		#ifdef MATRIXCF_USE_OPENMP
+		#pragma omp parallel for collapse(2)
+		#endif
         for(size_t i = 0; w > i; i++){
             for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i));
         }
@@ -673,14 +690,18 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, h, w, "transform", true);
 
-        // #pragma omp parallel for
+		#ifdef MATRIXCF_USE_OPENMP
+		#pragma omp parallel for
+		#endif
         for(size_t i = 0; total_size > i; i++) result.array[i] = f(array[i], X.array[i]);
 
     }else if(option == FIRST){
         requireMatrixShape(X, w, h, "transform");
         requireMatrixShape(result, w, h, "transform", true);
 
-        // #pragma omp parallel for collapse(2)
+		#ifdef MATRIXCF_USE_OPENMP
+		#pragma omp parallel for collapse(2)
+		#endif
         for(size_t i = 0; w > i; i++){
             for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(i, j));
         }
@@ -689,7 +710,9 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
         requireMatrixShape(*this, X.w, X.h, "transform");
         requireMatrixShape(result, X.w, X.h, "transform", true);
 
-        // #pragma omp parallel for collapse(2)
+		#ifdef MATRIXCF_USE_OPENMP
+		#pragma omp parallel for collapse(2)
+		#endif
         for(size_t i = 0; X.w > i; i++){
             for(size_t j = 0; X.h > j; j++) result[i][j] = f(getE(i, j), X.getE(j, i));
         }
@@ -697,7 +720,9 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, w, h, "transform", true);
 
-        // #pragma omp parallel for collapse(2)
+		#ifdef MATRIXCF_USE_OPENMP
+		#pragma omp parallel for collapse(2)
+		#endif
         for(size_t i = 0; w > i; i++){
             for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(j, i));
         }
