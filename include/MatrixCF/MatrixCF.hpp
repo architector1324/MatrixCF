@@ -54,10 +54,10 @@ namespace mcf{
         operator T*();
         operator const T*() const;
 
-        void send(Computer&, EXEC sync = SYNC);
-        void receive(Computer&, EXEC sync = SYNC);
-        void release(Computer&, EXEC sync = SYNC);
-        void grab(Computer&, EXEC sync = SYNC);
+        void send(ecl::Computer&, ecl::EXEC sync = SYNC);
+        void receive(ecl::Computer&, ecl::EXEC sync = SYNC);
+        void release(ecl::Computer&, ecl::EXEC sync = SYNC);
+        void grab(ecl::Computer&, ecl::EXEC sync = SYNC);
 
         void save(const std::string&) const;
         static Mat<T> load(const std::string&);
@@ -65,9 +65,9 @@ namespace mcf{
         template<typename U>
         friend std::ostream& operator<<(std::ostream&, const Mat<U>&);
         template<typename U>
-        friend Computer& operator<<(Computer&, Mat<U>&);
+        friend ecl::Computer& operator<<(ecl::Computer&, Mat<U>&);
         template<typename U>
-        friend Computer& operator>>(Computer&, Mat<U>&);
+        friend ecl::Computer& operator>>(ecl::Computer&, Mat<U>&);
 
         // methods (extra)
         bool equals(const Mat<T>&) const;
@@ -77,65 +77,65 @@ namespace mcf{
 
         // methods (mutable)
         void gen(const std::function<T(size_t, size_t)>&);
-        void gen(const std::string&, Computer&, EXEC sync = SYNC);
+        void gen(const std::string&, ecl::Computer&, ecl::EXEC sync = SYNC);
 
         void full(const T&);
-        void full(const T&, Computer&, EXEC sync = SYNC);
+        void full(const T&, ecl::Computer&, ecl::EXEC sync = SYNC);
 
         void zeros();
-        void zeros(Computer&, EXEC sync = SYNC);
+        void zeros(ecl::Computer&, ecl::EXEC sync = SYNC);
 
         void ones();
-        void ones(Computer&, EXEC sync = SYNC);
+        void ones(ecl::Computer&, ecl::EXEC sync = SYNC);
 
         void eye(const T& value = T(1));
-        void eye(const T& value, Computer&, EXEC sync = SYNC);
+        void eye(const T& value, ecl::Computer&, ecl::EXEC sync = SYNC);
 
         void hstack(const Mat<T>&, const Mat<T>&);
-        void hstack(const Mat<T>&, const Mat<T>&, Computer&, EXEC sync = SYNC);
+        void hstack(const Mat<T>&, const Mat<T>&, ecl::Computer&, ecl::EXEC sync = SYNC);
 
         void vstack(const Mat<T>&, const Mat<T>&);
-        void vstack(const Mat<T>&, const Mat<T>&, Computer&, EXEC sync = SYNC);
+        void vstack(const Mat<T>&, const Mat<T>&, ecl::Computer&, ecl::EXEC sync = SYNC);
 
         void cpy(const Mat<T>&);
         void view(Mat<T>&);
         
         // higher-order methods (immutable)
         void map(const std::function<T(const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void map(const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
+        void map(const std::string&, Mat<T>&, ecl::Computer&, TRANSPOSE option = NONE, ecl::EXEC sync = SYNC) const;
 
         void transform(const Mat<T>&, const std::function<T(const T&, const T&)>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void transform(const Mat<T>&, const std::string&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
+        void transform(const Mat<T>&, const std::string&, Mat<T>&, ecl::Computer&, TRANSPOSE option = NONE, ecl::EXEC sync = SYNC) const;
 
         // methods (immutable)
         void transpose(Mat<T>&) const;
-        void transpose(Mat<T>&, Computer&, EXEC sync = SYNC) const;
+        void transpose(Mat<T>&, ecl::Computer&, ecl::EXEC sync = SYNC) const;
 
         void reduce(Mat<T>&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE) const;
-        void reduce(Mat<T>&, Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE, EXEC sync = SYNC) const;
+        void reduce(Mat<T>&, ecl::Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE, ecl::EXEC sync = SYNC) const;
 
         T reduce() const;
 
         void add(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void add(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
+        void add(const Mat<T>&, Mat<T>&, ecl::Computer&, TRANSPOSE option = NONE, ecl::EXEC sync = SYNC) const;
 
         void sub(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void sub(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
+        void sub(const Mat<T>&, Mat<T>&, ecl::Computer&, TRANSPOSE option = NONE, ecl::EXEC sync = SYNC) const;
 
         void hadamard(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void hadamard(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
+        void hadamard(const Mat<T>&, Mat<T>&, ecl::Computer&, TRANSPOSE option = NONE, ecl::EXEC sync = SYNC) const;
 
         void mul(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void mul(const Mat<T>&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
+        void mul(const Mat<T>&, Mat<T>&, ecl::Computer&, TRANSPOSE option = NONE, ecl::EXEC sync = SYNC) const;
 
         void mul(const T&, Mat<T>&, TRANSPOSE option = NONE) const;
-        void mul(const T&, Mat<T>&, Computer&, TRANSPOSE option = NONE, EXEC sync = SYNC) const;
+        void mul(const T&, Mat<T>&, ecl::Computer&, TRANSPOSE option = NONE, ecl::EXEC sync = SYNC) const;
 
         void hsplit(Mat<T>&, Mat<T>&) const;
-        void hsplit(Mat<T>&, Mat<T>&, Computer&, EXEC sync = SYNC) const;
+        void hsplit(Mat<T>&, Mat<T>&, ecl::Computer&, ecl::EXEC sync = SYNC) const;
 
         void vsplit(Mat<T>&, Mat<T>&) const;
-        void vsplit(Mat<T>&, Mat<T>&, Computer&, EXEC sync = SYNC) const;
+        void vsplit(Mat<T>&, Mat<T>&, ecl::Computer&, ecl::EXEC sync = SYNC) const;
 
         ~Mat();
     };
@@ -165,7 +165,7 @@ std::string mcf::Mat<T>::getTypeName() const{
     else if constexpr(std::is_same<T, float>::value) return "float";
     else if constexpr (std::is_same<T, double>::value) return "double";
     else if constexpr(std::is_same<T, size_t>::value) return "size_t";
-    else throw std::runtime_error("Get matrix typename: computer calculations on matrices with this template aren't supported");
+    else throw std::runtime_error("Get matrix typename: ecl::Computer calculations on matrices with this template aren't supported");
 }
 
 template<typename T>
@@ -337,19 +337,19 @@ mcf::Mat<T>::operator const T*() const{
 }
 
 template<typename T>
-void mcf::Mat<T>::send(Computer& video, EXEC sync){
+void mcf::Mat<T>::send(ecl::Computer& video, ecl::EXEC sync){
     video.send(array, sync);
 }
 template<typename T>
-void mcf::Mat<T>::receive(Computer& video, EXEC sync){
+void mcf::Mat<T>::receive(ecl::Computer& video, ecl::EXEC sync){
     video.receive(array, sync);
 }
 template<typename T>
-void mcf::Mat<T>::release(Computer& video, EXEC sync){
+void mcf::Mat<T>::release(ecl::Computer& video, ecl::EXEC sync){
     video.release(array, sync);
 }
 template<typename T>
-void mcf::Mat<T>::grab(Computer& video, EXEC sync){
+void mcf::Mat<T>::grab(ecl::Computer& video, ecl::EXEC sync){
     video.grab(array, sync);
 }
 
@@ -396,12 +396,12 @@ namespace mcf{
     }
 
     template<typename T>
-    Computer& operator<<(Computer& video, Mat<T>& other){
+    ecl::Computer& operator<<(ecl::Computer& video, Mat<T>& other){
         other.send(video);
         return video;
     }
     template<typename T>
-    Computer& operator>>(Computer& video, Mat<T>& other){
+    ecl::Computer& operator>>(ecl::Computer& video, Mat<T>& other){
         other.receive(video);
         return video;
     }
@@ -437,13 +437,13 @@ void mcf::Mat<T>::ravel(mcf::RAVEL option){
 // methods (mutable)
 template<typename T>
 void mcf::Mat<T>::gen(const std::function<T(size_t, size_t)>& f){
-    #pragma omp parallel for collapse(2)
+    // #pragma omp parallel for collapse(2)
     for(size_t i = 0; h > i; i++){
         for(size_t j = 0; w > j; j++) setE(f(i, j), i, j);
     }
 }
 template<typename T>
-void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video, EXEC sync){
+void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video, ecl::EXEC sync){
     std::string type = getTypeName();
 
     ecl::Program prog = "__kernel void gen";
@@ -472,7 +472,7 @@ void mcf::Mat<T>::full(const T& value){
     });
 }
 template<typename T>
-void mcf::Mat<T>::full(const T& value, ecl::Computer& video, EXEC sync){
+void mcf::Mat<T>::full(const T& value, ecl::Computer& video, ecl::EXEC sync){
     std::string val = std::to_string(value);
     gen("ret = " + val + ";", video, sync);
 }
@@ -483,7 +483,7 @@ void mcf::Mat<T>::zeros(){
     });
 }
 template<typename T>
-void mcf::Mat<T>::zeros(ecl::Computer& video, EXEC sync){
+void mcf::Mat<T>::zeros(ecl::Computer& video, ecl::EXEC sync){
     gen("ret = 0;", video, sync);
 }
 
@@ -494,7 +494,7 @@ void mcf::Mat<T>::ones(){
     });
 }
 template<typename T>
-void mcf::Mat<T>::ones(ecl::Computer& video, EXEC sync){
+void mcf::Mat<T>::ones(ecl::Computer& video, ecl::EXEC sync){
     gen("ret = 1;", video, sync);
 }
 
@@ -505,7 +505,7 @@ void mcf::Mat<T>::eye(const T& value){
     });
 }
 template<typename T>
-void mcf::Mat<T>::eye(const T& value, ecl::Computer& video, EXEC sync){
+void mcf::Mat<T>::eye(const T& value, ecl::Computer& video, ecl::EXEC sync){
     std::string val = std::to_string(value);
     gen("ret = i == j ? + " + val + " : 0;", video, sync);
 }
@@ -515,7 +515,7 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B){
     requireMatrixH(A.h, B.h, "hstack");
     requireMatrixShape(*this, A.h, A.w + B.w, "hstack", true);
 
-    #pragma omp parallel for collapse(2)
+    // #pragma omp parallel for collapse(2)
     for(size_t i = 0; h > i; i++){
         for(size_t j = 0; w > j; j++){
             if(A.w > j) setE(A.getE(i, j), i, j);
@@ -524,7 +524,7 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B){
     }
 }
 template<typename T>
-void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video, EXEC sync){
+void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video, ecl::EXEC sync){
     std::string type = getTypeName();
 
     requireMatrixH(A.h, B.h, "hstack");
@@ -553,7 +553,7 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B){
     requireMatrixH(A.w, B.w, "vstack");
     requireMatrixShape(*this, A.h + B.h, A.w, "vstack", true);
 
-    #pragma omp parallel for collapse(2)
+    // #pragma omp parallel for collapse(2)
     for(size_t i = 0; h > i; i++){
         for(size_t j = 0; w > j; j++){
             if(A.h > i) setE(A.getE(i, j), i, j);
@@ -562,7 +562,7 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B){
     }
 }
 template<typename T>
-void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video, EXEC sync){
+void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video, ecl::EXEC sync){
     std::string type = getTypeName();
 
     requireMatrixH(A.w, B.w, "vstack");
@@ -591,7 +591,7 @@ template<typename T>
 void mcf::Mat<T>::cpy(const Mat<T>& X){
     requireMatrixShape(X, h, w, "cpy");
 
-    #pragma omp parallel for collapse(2)
+    // #pragma omp parallel for collapse(2)
     for(size_t i = 0; h > i; i++)
         for(size_t j = 0; w > j; j++) setE(X.getE(i, j), i, j);
 }
@@ -611,20 +611,20 @@ void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result, 
     if(option == NONE){
         requireMatrixShape(result, h, w, "map", true);
 
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(size_t i = 0; total_size > i; i++) result.array[i] = f(array[i]);
     }
     else{
         requireMatrixShape(result, w, h, "map", true);
 
-        #pragma omp parallel for collapse(2)
+        // #pragma omp parallel for collapse(2)
         for(size_t i = 0; w > i; i++){
             for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i));
         }
     }
 }
 template<typename T>
-void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const
+void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Computer& video, TRANSPOSE option, ecl::EXEC sync) const
 {
     std::string type = getTypeName();
 
@@ -673,14 +673,14 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, h, w, "transform", true);
 
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(size_t i = 0; total_size > i; i++) result.array[i] = f(array[i], X.array[i]);
 
     }else if(option == FIRST){
         requireMatrixShape(X, w, h, "transform");
         requireMatrixShape(result, w, h, "transform", true);
 
-        #pragma omp parallel for collapse(2)
+        // #pragma omp parallel for collapse(2)
         for(size_t i = 0; w > i; i++){
             for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(i, j));
         }
@@ -689,7 +689,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
         requireMatrixShape(*this, X.w, X.h, "transform");
         requireMatrixShape(result, X.w, X.h, "transform", true);
 
-        #pragma omp parallel for collapse(2)
+        // #pragma omp parallel for collapse(2)
         for(size_t i = 0; X.w > i; i++){
             for(size_t j = 0; X.h > j; j++) result[i][j] = f(getE(i, j), X.getE(j, i));
         }
@@ -697,14 +697,14 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, w, h, "transform", true);
 
-        #pragma omp parallel for collapse(2)
+        // #pragma omp parallel for collapse(2)
         for(size_t i = 0; w > i; i++){
             for(size_t j = 0; h > j; j++) result[i][j] = f(getE(j, i), X.getE(j, i));
         }
     }
 }
 template<typename T>
-void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
+void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, ecl::EXEC sync) const{
     if(option == NONE){
         requireMatrixShape(X, h, w, "transform");
         requireMatrixShape(result, h, w, "transform", true);
@@ -805,7 +805,7 @@ void mcf::Mat<T>::transpose(Mat<T>& result) const{
     }, result, FIRST);
 }
 template<typename T>
-void mcf::Mat<T>::transpose(Mat<T>& result, Computer& video, EXEC sync) const{
+void mcf::Mat<T>::transpose(Mat<T>& result, ecl::Computer& video, ecl::EXEC sync) const{
     map("ret = v;", result, video, FIRST, sync);
 }
 
@@ -822,7 +822,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             requireMatrixShape(result, 1, w, "reduce", true);
             result.zeros();
 
-            #pragma omp parallel for
+            // #pragma omp parallel for
             for(size_t j = 0; w > j; j++){
                 for(size_t i = 0; h > i; i++) result[0][j] += getE(i, j);
             }
@@ -830,7 +830,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             requireMatrixShape(result, h, 1, "reduce", true);
             result.zeros();
 
-            #pragma omp parallel for
+            // #pragma omp parallel for
             for(size_t i = 0; h > i; i++){
                 for(size_t j = 0; w > j; j++) result[i][0] += getE(i, j);
             }
@@ -840,7 +840,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             requireMatrixShape(result, 1, 1, "reduce", true);
             result.zeros();
 
-            #pragma omp parallel for
+            // #pragma omp parallel for
             for(size_t j = 0; h > j; j++){
                 for(size_t i = 0; w > i; i++) result[0][0] += getE(j, i);
             }
@@ -848,7 +848,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             requireMatrixShape(result, 1, h, "reduce", true);
             result.zeros();
 
-            #pragma omp parallel for
+            // #pragma omp parallel for
             for(size_t j = 0; h > j; j++){
                 for(size_t i = 0; w > i; i++) result[0][j] += getE(j, i);
             }
@@ -856,7 +856,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             requireMatrixShape(result, w, 1, "reduce", true);
             result.zeros();
 
-            #pragma omp parallel for
+            // #pragma omp parallel for
             for(size_t i = 0; w > i; i++){
                 for(size_t j = 0; h > j; j++) result[i][0] += getE(j, i);
             }
@@ -864,10 +864,10 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
     }
 }
 template<typename T>
-void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TRANSPOSE transpose_option, EXEC sync) const{
+void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TRANSPOSE transpose_option, ecl::EXEC sync) const{
     if(transpose_option == NONE){
         if(option == FULL){
-            throw std::runtime_error("full reduce on computer temporary unavailable");
+            throw std::runtime_error("full reduce on ecl::Computer temporary unavailable");
         }else if(option == ROWS){
             requireMatrixShape(result, 1, w, "reduce", true);
             result.zeros(video);
@@ -918,7 +918,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
         }
     }else{
         if(option == FULL){
-            throw std::runtime_error("full reduce on computer temporary unavailable");
+            throw std::runtime_error("full reduce on ecl::Computer temporary unavailable");
         }else if(option == ROWS){
             requireMatrixShape(result, 1, h, "reduce", true);
             result.zeros(video);
@@ -985,7 +985,7 @@ void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
+void mcf::Mat<T>::add(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, ecl::EXEC sync) const{
     transform(X, "ret = v1 + v2;", result, video, option, sync);
 }
 
@@ -996,7 +996,7 @@ void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
+void mcf::Mat<T>::sub(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, ecl::EXEC sync) const{
     transform(X, "ret = v1 - v2;", result, video, option, sync);
 }
 
@@ -1007,7 +1007,7 @@ void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) co
     }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
+void mcf::Mat<T>::hadamard(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, ecl::EXEC sync) const{
     transform(X, "ret = v1 * v2;", result, video, option, sync);
 }
 
@@ -1037,27 +1037,27 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     result.zeros();
 
     if(option == NONE){    
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(size_t i = 0; first_h > i; i++)
             for(size_t k = 0; first_w > k; k++)
                 for(size_t j = 0; second_w > j; j++)
                     result[i][j] += getE(i, k) * X.getE(k, j);
 
     }else if(option == FIRST){
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(size_t i = 0; first_h > i; i++)
             for(size_t k = 0; first_w > k; k++) 
                 for(size_t j = 0; second_w > j; j++)
                     result[i][j] += getE(k, i) * X.getE(k, j);
 
     }else if(option == SECOND){    
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(size_t i = 0; first_h > i; i++)
             for(size_t j = 0; second_w > j; j++)
                 for(size_t k = 0; first_w > k; k++)
                     result[i][j] += getE(i, k) * X.getE(j, k);
     }else{
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(size_t i = 0; first_h > i; i++)
             for(size_t j = 0; second_w > j; j++)
                 for(size_t k = 0; first_w > k; k++)
@@ -1065,7 +1065,7 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, TRANSPOSE option) const{
     }
 }
 template<typename T>
-void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, EXEC sync) const{
+void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, ecl::EXEC sync) const{
     std::string type = getTypeName();
 
     size_t first_h = h;
@@ -1120,7 +1120,7 @@ void mcf::Mat<T>::mul(const T& value, Mat<T>& result, TRANSPOSE option) const{
     }, result, option);
 }
 template<typename T>
-void mcf::Mat<T>::mul(const T& value, Mat<T>& result, Computer& video, TRANSPOSE option, EXEC sync) const{
+void mcf::Mat<T>::mul(const T& value, Mat<T>& result, ecl::Computer& video, TRANSPOSE option, ecl::EXEC sync) const{
     std::string val = std::to_string(value);
     map("ret = v * " + val + ";", result, video, option, sync);
 }
@@ -1130,7 +1130,7 @@ void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B) const{
     requireMatrixH(A.h, B.h, "hsplit");
     requireMatrixShape(*this, A.h, A.w + B.w, "hsplit", true);
 
-    #pragma omp parallel for collapse(2)
+    // #pragma omp parallel for collapse(2)
     for(size_t i = 0; h > i; i++){
         for(size_t j = 0; w > j; j++){
             if(A.w > j) A[i][j] = getE(i, j);
@@ -1139,7 +1139,7 @@ void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B) const{
     }
 }
 template<typename T>
-void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, EXEC sync) const{
+void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, ecl::EXEC sync) const{
     std::string type = getTypeName();
 
     requireMatrixH(A.h, B.h, "hsplit");
@@ -1168,7 +1168,7 @@ void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B) const{
     requireMatrixH(A.w, B.w, "vsplit");
     requireMatrixShape(*this, A.h + B.h, A.w, "vsplit", true);
 
-    #pragma omp parallel for collapse(2)
+    // #pragma omp parallel for collapse(2)
     for(size_t i = 0; h > i; i++){
         for(size_t j = 0; w > j; j++){
             if(A.h > i) A[i][j] = getE(i, j);
@@ -1177,7 +1177,7 @@ void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B) const{
     }
 }
 template<typename T>
-void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, EXEC sync) const{
+void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, ecl::EXEC sync) const{
     std::string type = getTypeName();
 
     requireMatrixH(A.w, B.w, "vsplit");
