@@ -24,7 +24,7 @@ namespace mcf{
     private:
         size_t h, w, total_size;
         Array<T> array;
-        Variable<bool> ref;
+        bool ref;
 
         void clearFields();
         std::string getTypeName() const;
