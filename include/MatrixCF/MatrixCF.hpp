@@ -120,6 +120,7 @@ namespace mcf{
         void reduce(Mat<T>&, ecl::Computer&, REDUCE option = FULL, TRANSPOSE transpose_option = NONE, ecl::EXEC sync = SYNC) const;
 
         T reduce() const;
+		T mreduce(const std::function<T(const T&)>&) const;
 
         void add(const Mat<T>&, Mat<T>&, TRANSPOSE option = NONE) const;
         void add(const Mat<T>&, Mat<T>&, ecl::Computer&, TRANSPOSE option = NONE, ecl::EXEC sync = SYNC) const;
@@ -1001,6 +1002,14 @@ T mcf::Mat<T>::reduce() const{
     for(size_t i = 0; i < total_size; i++) result += array[i];
 
     return result;
+}
+template<typename T>
+T mcf::Mat<T>::mreduce(const std::function<T(const T&)>& f) const {
+	T result = 0;
+
+	for (size_t i = 0; i < total_size; i++) result += f(array[i]);
+
+	return result;
 }
 
 template<typename T>
