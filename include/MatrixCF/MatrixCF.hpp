@@ -23,14 +23,17 @@ namespace mcf{
     class Mat{
     private:
         size_t h, w, total_size;
-        Array<T> array;
+        array<T> arr;
         bool ref;
 
-        void clearFields();
+        void clear();
         std::string getTypeName() const;
         void requireMatrixShape(const Mat<T>&, size_t, size_t, const std::string&, bool is_result = false) const;
         void requireMatrixH(size_t, size_t, const std::string&) const;
         void requireTotalSize(const Mat<T>&, size_t, const std::string&) const;
+
+		void copy(const Mat<T>&);
+		void move(Mat<T>&);
     public:
         Mat();
         Mat(size_t, size_t);
@@ -42,9 +45,9 @@ namespace mcf{
         Mat(Mat<T>&&);
         Mat<T>& operator=(Mat<T>&&);
 
-        Array<T>& getArray();
+        array<T>& getArray();
 
-        const Array<T>& getConstArray() const;
+        const array<T>& getConstArray() const;
         const size_t getH() const;
         const size_t getW() const;
         const size_t getTotalSize() const;
@@ -149,11 +152,11 @@ namespace mcf{
 
 // IMPLEMENTATION
 template<typename T>
-void mcf::Mat<T>::clearFields(){
+void mcf::Mat<T>::clear(){
     h = 0;
     w = 0;
     total_size = 0;
-    array.clearFields();
+    arr.clear();
     ref = 0;
 }
 
@@ -214,6 +217,27 @@ void mcf::Mat<T>::requireTotalSize(const Mat<T>& X, size_t require_total_size, c
     }
 }
 
+template<typename T>
+void mcf::Mat<T>::copy(const Mat<T>& other) {
+	clear();
+
+	h = other.h;
+	w = other.w;
+	total_size = other.total_size;
+	arr = other.arr;
+	ref = false;
+}
+template<typename T>
+void mcf::Mat<T>::move(Mat<T>& other) {
+	h = std::move(other.h);
+	w = std::move(other.w);
+	total_size = std::move(other.total_size);
+	arr = std::move(other.arr);
+	ref = std::move(other.ref);
+
+	other.clear();
+}
+
 // Constructors
 template<typename T>
 mcf::Mat<T>::Mat(){
@@ -224,7 +248,7 @@ mcf::Mat<T>::Mat(){
 }
 
 template<typename T>
-mcf::Mat<T>::Mat(size_t h, size_t w) : array(w * h){
+mcf::Mat<T>::Mat(size_t h, size_t w) : arr(w * h){
     this->h = h;
     this->w = w;
     total_size = w * h;
@@ -232,7 +256,7 @@ mcf::Mat<T>::Mat(size_t h, size_t w) : array(w * h){
 }
 
 template<typename T>
-mcf::Mat<T>::Mat(T* array, size_t h, size_t w) : array(array, h * w, READ_WRITE){
+mcf::Mat<T>::Mat(T* arr, size_t h, size_t w) : arr(arr, h * w, READ_WRITE){
     this->h = h;
     this->w = w;
     total_size = w * h;
@@ -242,55 +266,31 @@ mcf::Mat<T>::Mat(T* array, size_t h, size_t w) : array(array, h * w, READ_WRITE)
 
 template<typename T>
 mcf::Mat<T>::Mat(const Mat<T>& other){
-    clearFields();
-
-    h = other.h;
-    w = other.w;
-    total_size = other.total_size;
-    array = other.array;
-    ref = false;
+	copy(other);
 }
 template<typename T>
 mcf::Mat<T>& mcf::Mat<T>::operator=(const Mat<T>& other){
-    clearFields();
-
-    h = other.h;
-    w = other.w;
-    total_size = other.total_size;
-    array = other.array;
-    ref = false;
+	copy(other);
 
     return *this;
 }
 
 template<typename T>
 mcf::Mat<T>::Mat(Mat<T>&& other){
-    h = std::move(other.h);
-    w = std::move(other.w);
-    total_size = std::move(other.total_size);
-    array = std::move(other.array);
-    ref = std::move(other.ref);
-
-    other.clearFields();
+	move(other);
 }
 
 template<typename T>
 mcf::Mat<T>& mcf::Mat<T>::operator=(Mat<T>&& other){
-    h = std::move(other.h);
-    w = std::move(other.w);
-    total_size = std::move(other.total_size);
-    array = std::move(other.array);
-    ref = std::move(other.ref);
-
-    other.clearFields();
+	move(other);
 
     return *this;
 }
 
 // Getters
 template<typename T>
-const mcf::Array<T>& mcf::Mat<T>::getConstArray() const{
-    return array;
+const mcf::array<T>& mcf::Mat<T>::getConstArray() const{
+    return arr;
 }
 template<typename T>
 const size_t mcf::Mat<T>::getH() const{
@@ -306,8 +306,8 @@ const size_t mcf::Mat<T>::getTotalSize() const{
 }
 
 template<typename T>
-mcf::Array<T>& mcf::Mat<T>::getArray(){
-    return array;
+mcf::array<T>& mcf::Mat<T>::getArray(){
+    return arr;
 }
 
 template<typename T>
@@ -321,42 +321,42 @@ bool mcf::Mat<T>::isRef() const{
 
 template<typename T>
 const T& mcf::Mat<T>::getE(size_t i, size_t j) const{
-    return array[w * i + j];
+    return arr[w * i + j];
 }
 template<typename T>
 void mcf::Mat<T>::setE(const T& value, size_t i, size_t j){
-    array[w * i + j] = value;
+    arr[w * i + j] = value;
 }
 
 template<typename T>
 T* mcf::Mat<T>::operator[](size_t i){
-    return array + i * w;
+    return arr + i * w;
 }
 
 template<typename T>
 mcf::Mat<T>::operator T*(){
-    return array;
+    return arr;
 }
 template<typename T>
 mcf::Mat<T>::operator const T*() const{
-    return array;
+    return arr;
 }
 
 template<typename T>
 void mcf::Mat<T>::send(ecl::Computer& video, ecl::EXEC sync){
-    video.send(array, sync);
+    video.send(arr, sync);
 }
 template<typename T>
 void mcf::Mat<T>::receive(ecl::Computer& video, ecl::EXEC sync){
-    video.receive(array, sync);
+    video.receive(arr, sync);
 }
 template<typename T>
 void mcf::Mat<T>::release(ecl::Computer& video, ecl::EXEC sync){
-    video.release(array, sync);
+    video.release(arr, sync);
 }
 template<typename T>
 void mcf::Mat<T>::grab(ecl::Computer& video, ecl::EXEC sync){
-    video.grab(array, sync);
+    video.grab(arr, sync);
 }
 
 template<typename T>
@@ -368,7 +368,7 @@ void mcf::Mat<T>::save(const std::string& json_filename) const{
     j["w"] = static_cast<size_t>(w);
     j["h"] = static_cast<size_t>(h);
     j["total_size"] = static_cast<size_t>(total_size);
-    j["array"] = std::vector<T>(static_cast<const T*>(array), array + total_size);
+    j["array"] = std::vector<T>(static_cast<const T*>(arr), arr + total_size);
 
     f << std::setw(4) << j;
     f.close();
@@ -423,7 +423,7 @@ bool mcf::Mat<T>::equals(const Mat<T>& X) const{
     }
 
     for(size_t i = 0; total_size > i; i++){
-        if(array[i] != X.array[i]) return false;
+        if(arr[i] != X.arr[i]) return false;
     }
     return true;
 }
@@ -469,7 +469,7 @@ void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video, ecl::EXEC s
 
     ecl::Kernel gen = "gen";
 
-    ecl::Frame frame = {prog, gen, {&array}};
+    ecl::Frame frame = {prog, gen, {&arr}};
     video.grid(frame, {h, w}, sync);
 }
 
@@ -554,7 +554,7 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video,
 
     ecl::Kernel hstack = "hstack";
 
-    ecl::Frame frame = {prog, hstack, {&A.array, &B.array, &array}};
+    ecl::Frame frame = {prog, hstack, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
 }
 
@@ -595,7 +595,7 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video,
 
     ecl::Kernel vstack = "vstack";
 
-    ecl::Frame frame = {prog, vstack, {&A.array, &B.array, &array}};
+    ecl::Frame frame = {prog, vstack, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
 }
 
@@ -613,9 +613,7 @@ template<typename T>
 void mcf::Mat<T>::view(Mat<T>& X){
     requireTotalSize(X, total_size, "view");
 
-    array.clearFields();
-    array.setDataPtr(X.array.getDataPtr());
-    array.setDataSize(X.array.getDataSize());
+	arr.view(X.getArray());
 }
 
 // higher-order methods (immutable)
@@ -628,7 +626,7 @@ void mcf::Mat<T>::map(const std::function<T(const T&)>& f, mcf::Mat<T>& result, 
 		#ifdef MATRIXCF_USE_OPENMP
 		#pragma omp parallel for
 		#endif
-        for(size_t i = 0; total_size > i; i++) result.array[i] = f(array[i]);
+        for(size_t i = 0; total_size > i; i++) result.arr[i] = f(arr[i]);
     }
     else{
         requireMatrixShape(result, w, h, "map", true);
@@ -660,7 +658,7 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
 
         ecl::Kernel map = "map";
 
-        ecl::Frame frame = {prog, map, {&array, &result.array}};
+        ecl::Frame frame = {prog, map, {&arr, &result.arr}};
         video.grid(frame, {total_size}, sync);
     }
     else{
@@ -680,7 +678,7 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
 
         ecl::Kernel map = "map";
 
-        ecl::Frame frame = {prog, map, {&array, &result.array}};
+        ecl::Frame frame = {prog, map, {&arr, &result.arr}};
         video.grid(frame, {w, h}, sync);
     }
 }
@@ -694,7 +692,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::function<T(const T&, con
 		#ifdef MATRIXCF_USE_OPENMP
 		#pragma omp parallel for
 		#endif
-        for(size_t i = 0; total_size > i; i++) result.array[i] = f(array[i], X.array[i]);
+        for(size_t i = 0; total_size > i; i++) result.arr[i] = f(arr[i], X.arr[i]);
 
     }else if(option == FIRST){
         requireMatrixShape(X, w, h, "transform");
@@ -750,7 +748,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         ecl::Kernel transform = "transform";
 
-        ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
+        ecl::Frame frame = {prog, transform, {&arr, &X.arr, &result.arr}};
         video.grid(frame, {h, w}, sync);
 
     }else if(option == FIRST){
@@ -773,7 +771,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         ecl::Kernel transform = "transform";
 
-        ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
+        ecl::Frame frame = {prog, transform, {&arr, &X.arr, &result.arr}};
         video.grid(frame, {w, h}, sync);
 
     }else if(option == SECOND){
@@ -796,7 +794,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         ecl::Kernel transform = "transform";
 
-        ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
+        ecl::Frame frame = {prog, transform, {&arr, &X.arr, &result.arr}};
         video.grid(frame, {X.w, X.h}, sync);
     }else{
         requireMatrixShape(X, h, w, "transform");
@@ -818,7 +816,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         ecl::Kernel transform = "transform";
 
-        ecl::Frame frame = {prog, transform, {&array, &X.array, &result.array}};
+        ecl::Frame frame = {prog, transform, {&arr, &X.arr, &result.arr}};
         video.grid(frame, {w, h}, sync);
     }
 }
@@ -843,7 +841,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, REDUCE option, TRANSPOSE transpose_opti
             requireMatrixShape(result, 1, 1, "reduce", true);
             result.zeros();
 
-            for(size_t i = 0; total_size > i; i++) result[0][0] += array[i];
+            for(size_t i = 0; total_size > i; i++) result[0][0] += arr[i];
         }else if(option == ROWS){
             requireMatrixShape(result, 1, w, "reduce", true);
             result.zeros();
@@ -914,7 +912,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             ecl::Kernel reduce = "reduce";
 
-            ecl::Frame frame = {prog, reduce, {&array, &result.array}};
+            ecl::Frame frame = {prog, reduce, {&arr, &result.arr}};
             video.grid(frame, {w}, sync);
 
         } else if(option == COLUMNS){
@@ -939,7 +937,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             ecl::Kernel reduce = "reduce";
 
-            ecl::Frame frame = {prog, reduce, {&array, &result.array}};
+            ecl::Frame frame = {prog, reduce, {&arr, &result.arr}};
             video.grid(frame, {h}, sync);
         }
     }else{
@@ -965,7 +963,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             ecl::Kernel reduce = "reduce";
 
-            ecl::Frame frame = {prog, reduce, {&array, &result.array}};
+            ecl::Frame frame = {prog, reduce, {&arr, &result.arr}};
             video.grid(frame, {h}, sync);
 
         } else if(option == COLUMNS){
@@ -989,7 +987,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             ecl::Kernel reduce = "reduce";
 
-            ecl::Frame frame = {prog, reduce, {&array, &result.array}};
+            ecl::Frame frame = {prog, reduce, {&arr, &result.arr}};
             video.grid(frame, {w}, sync);
         }
     }
@@ -999,7 +997,7 @@ template<typename T>
 T mcf::Mat<T>::reduce() const{
     T result = 0;
 
-    for(size_t i = 0; i < total_size; i++) result += array[i];
+    for(size_t i = 0; i < total_size; i++) result += arr[i];
 
     return result;
 }
@@ -1007,7 +1005,7 @@ template<typename T>
 T mcf::Mat<T>::mreduce(const std::function<T(const T&)>& f) const {
 	T result = 0;
 
-	for (size_t i = 0; i < total_size; i++) result += f(array[i]);
+	for (size_t i = 0; i < total_size; i++) result += f(arr[i]);
 
 	return result;
 }
@@ -1143,7 +1141,7 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRA
 
     ecl::Kernel mul = "mul";
 
-    ecl::Frame frame = {prog, mul, {&array, &X.array, &result.array}};
+    ecl::Frame frame = {prog, mul, {&arr, &X.arr, &result.arr}};
     video.grid(frame, {first_h, second_w}, sync);
 }
 
@@ -1193,7 +1191,7 @@ void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, ecl::EXEC s
 
     ecl::Kernel hsplit = "hsplit";
 
-    ecl::Frame frame = {prog, hsplit, {&A.array, &B.array, &array}};
+    ecl::Frame frame = {prog, hsplit, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
 }
 
@@ -1232,12 +1230,12 @@ void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, ecl::EXEC s
 
     ecl::Kernel vsplit = "vsplit";
 
-    ecl::Frame frame = {prog, vsplit, {&A.array, &B.array, &array}};
+    ecl::Frame frame = {prog, vsplit, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
 }
 
 
 template<typename T>
 mcf::Mat<T>::~Mat(){
-    clearFields();
+    clear();
 }
