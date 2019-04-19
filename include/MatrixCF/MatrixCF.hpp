@@ -242,11 +242,16 @@ void mcf::Mat<T>::copy(const Mat<T>& other) {
 }
 template<typename T>
 void mcf::Mat<T>::move(Mat<T>& other) {
-	h = std::move(other.h);
-	w = std::move(other.w);
-	total_size = std::move(other.total_size);
+	h = other.h;
+	w = other.w;
+	total_size = other.total_size;
 	arr = std::move(other.arr);
-	ref = std::move(other.ref);
+	ref = other.ref;
+
+	other.h = 0;
+	other.w = 0;
+	other.total_size = 0;
+	other.ref = false;
 
 	other.clear();
 }
