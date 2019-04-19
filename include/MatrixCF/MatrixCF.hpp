@@ -19,6 +19,19 @@ namespace mcf{
     enum REDUCE {FULL, COLUMNS, ROWS};
     enum TRANSPOSE {NONE, FIRST, SECOND, BOTH};
 
+	// Cache
+	static std::vector<ecl::Program> cache;
+
+	ecl::Program& cacheProgram(ecl::Program& prog) {
+		for(ecl::Program& p : cache) {
+			if (p.getSource().compare(prog.getSource()) == 0) return p;
+		}
+
+		cache.push_back(std::move(prog));
+		return cache.back();
+	}
+
+	// Matrix API
     template<typename T>
     class Mat{
     private:
@@ -469,7 +482,7 @@ void mcf::Mat<T>::gen(const std::string& body, ecl::Computer& video, ecl::EXEC s
 
     ecl::Kernel gen = "gen";
 
-    ecl::Frame frame = {prog, gen, {&arr}};
+    ecl::Frame frame = {cacheProgram(prog), gen, {&arr}};
     video.grid(frame, {h, w}, sync);
 }
 
@@ -554,7 +567,7 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video,
 
     ecl::Kernel hstack = "hstack";
 
-    ecl::Frame frame = {prog, hstack, {&A.arr, &B.arr, &arr}};
+    ecl::Frame frame = {cacheProgram(prog), hstack, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
 }
 
@@ -595,7 +608,7 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video,
 
     ecl::Kernel vstack = "vstack";
 
-    ecl::Frame frame = {prog, vstack, {&A.arr, &B.arr, &arr}};
+    ecl::Frame frame = {cacheProgram(prog), vstack, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
 }
 
@@ -658,7 +671,7 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
 
         ecl::Kernel map = "map";
 
-        ecl::Frame frame = {prog, map, {&arr, &result.arr}};
+        ecl::Frame frame = {cacheProgram(prog), map, {&arr, &result.arr}};
         video.grid(frame, {total_size}, sync);
     }
     else{
@@ -678,7 +691,7 @@ void mcf::Mat<T>::map(const std::string& body, mcf::Mat<T>& result, ecl::Compute
 
         ecl::Kernel map = "map";
 
-        ecl::Frame frame = {prog, map, {&arr, &result.arr}};
+        ecl::Frame frame = {cacheProgram(prog), map, {&arr, &result.arr}};
         video.grid(frame, {w, h}, sync);
     }
 }
@@ -748,7 +761,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         ecl::Kernel transform = "transform";
 
-        ecl::Frame frame = {prog, transform, {&arr, &X.arr, &result.arr}};
+        ecl::Frame frame = {cacheProgram(prog), transform, {&arr, &X.arr, &result.arr}};
         video.grid(frame, {h, w}, sync);
 
     }else if(option == FIRST){
@@ -771,7 +784,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         ecl::Kernel transform = "transform";
 
-        ecl::Frame frame = {prog, transform, {&arr, &X.arr, &result.arr}};
+        ecl::Frame frame = {cacheProgram(prog), transform, {&arr, &X.arr, &result.arr}};
         video.grid(frame, {w, h}, sync);
 
     }else if(option == SECOND){
@@ -794,7 +807,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         ecl::Kernel transform = "transform";
 
-        ecl::Frame frame = {prog, transform, {&arr, &X.arr, &result.arr}};
+        ecl::Frame frame = {cacheProgram(prog), transform, {&arr, &X.arr, &result.arr}};
         video.grid(frame, {X.w, X.h}, sync);
     }else{
         requireMatrixShape(X, h, w, "transform");
@@ -816,7 +829,7 @@ void mcf::Mat<T>::transform(const Mat<T>& X, const std::string& body, Mat<T>& re
 
         ecl::Kernel transform = "transform";
 
-        ecl::Frame frame = {prog, transform, {&arr, &X.arr, &result.arr}};
+        ecl::Frame frame = {cacheProgram(prog), transform, {&arr, &X.arr, &result.arr}};
         video.grid(frame, {w, h}, sync);
     }
 }
@@ -912,7 +925,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             ecl::Kernel reduce = "reduce";
 
-            ecl::Frame frame = {prog, reduce, {&arr, &result.arr}};
+            ecl::Frame frame = {cacheProgram(prog), reduce, {&arr, &result.arr}};
             video.grid(frame, {w}, sync);
 
         } else if(option == COLUMNS){
@@ -937,7 +950,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             ecl::Kernel reduce = "reduce";
 
-            ecl::Frame frame = {prog, reduce, {&arr, &result.arr}};
+            ecl::Frame frame = {cacheProgram(prog), reduce, {&arr, &result.arr}};
             video.grid(frame, {h}, sync);
         }
     }else{
@@ -963,7 +976,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             ecl::Kernel reduce = "reduce";
 
-            ecl::Frame frame = {prog, reduce, {&arr, &result.arr}};
+            ecl::Frame frame = {cacheProgram(prog), reduce, {&arr, &result.arr}};
             video.grid(frame, {h}, sync);
 
         } else if(option == COLUMNS){
@@ -987,7 +1000,7 @@ void mcf::Mat<T>::reduce(Mat<T>& result, ecl::Computer& video, REDUCE option, TR
 
             ecl::Kernel reduce = "reduce";
 
-            ecl::Frame frame = {prog, reduce, {&arr, &result.arr}};
+            ecl::Frame frame = {cacheProgram(prog), reduce, {&arr, &result.arr}};
             video.grid(frame, {w}, sync);
         }
     }
@@ -1141,7 +1154,7 @@ void mcf::Mat<T>::mul(const Mat<T>& X, Mat<T>& result, ecl::Computer& video, TRA
 
     ecl::Kernel mul = "mul";
 
-    ecl::Frame frame = {prog, mul, {&arr, &X.arr, &result.arr}};
+    ecl::Frame frame = {cacheProgram(prog), mul, {&arr, &X.arr, &result.arr}};
     video.grid(frame, {first_h, second_w}, sync);
 }
 
@@ -1191,7 +1204,7 @@ void mcf::Mat<T>::hsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, ecl::EXEC s
 
     ecl::Kernel hsplit = "hsplit";
 
-    ecl::Frame frame = {prog, hsplit, {&A.arr, &B.arr, &arr}};
+    ecl::Frame frame = {cacheProgram(prog), hsplit, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
 }
 
@@ -1230,7 +1243,7 @@ void mcf::Mat<T>::vsplit(Mat<T>& A, Mat<T>& B, ecl::Computer& video, ecl::EXEC s
 
     ecl::Kernel vsplit = "vsplit";
 
-    ecl::Frame frame = {prog, vsplit, {&A.arr, &B.arr, &arr}};
+    ecl::Frame frame = {cacheProgram(prog), vsplit, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
 }
 
