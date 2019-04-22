@@ -97,6 +97,9 @@ namespace mcf{
         void ravel(RAVEL option = ROW);
 
         // methods (mutable)
+        void foreach(const std::function<void(size_t, size_t)>&);
+        void foreach(const std::string&, ecl::Computer&, ecl::EXEC sync = SYNC);
+
         void gen(const std::function<T(size_t, size_t)>&);
         void gen(const std::string&, ecl::Computer&, ecl::EXEC sync = SYNC);
 
@@ -459,6 +462,35 @@ void mcf::Mat<T>::ravel(mcf::RAVEL option){
 }
 
 // methods (mutable)
+template<typename T>
+void mcf::Mat<T>::foreach(const std::function<void(size_t, size_t)>& f){
+    #ifdef MATRIXCF_USE_OPENMP
+	#pragma omp parallel for collapse(2)
+	#endif 
+    for(size_t i = 0; h > i; i++){
+        for(size_t j = 0; w > j; j++) f(i, j);
+    }
+}
+template<typename T>
+void mcf::Mat<T>::foreach(const std::string& body, ecl::Computer& video, ecl::EXEC sync){
+    std::string type = getTypeName();
+
+    ecl::Program prog = "__kernel void foreach";
+    prog += "(__global " + type + "* result)";
+    prog += "{\n";
+    prog += "size_t i = get_global_id(0);\n";
+    prog += "size_t j = get_global_id(1);\n";
+    prog += "size_t h = get_global_size(0);\n";
+    prog += "size_t w = get_global_size(1);\n";
+    prog += body + "\n";
+    prog += "}";
+
+    ecl::Kernel foreach = "foreach";
+
+    ecl::Frame frame = {cacheProgram(prog), foreach, {&arr}};
+    video.grid(frame, {h, w}, sync);
+}
+
 template<typename T>
 void mcf::Mat<T>::gen(const std::function<T(size_t, size_t)>& f){
 	#ifdef MATRIXCF_USE_OPENMP
