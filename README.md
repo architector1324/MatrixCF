@@ -7,6 +7,12 @@ Only 3 headers:
 - `json.hpp` by [Nlohmann](https://github.com/nlohmann/json) 
 
 ## Example (CPU)
+1. Copy these headers to your project folder:
+- `MatrixCF.hpp`
+- `EasyCL.hpp`
+- `json.hpp`
+
+2. Create `main.cpp`:
 ```c++
 #include <iostream>
 #include "MatrixCF.hpp"
@@ -38,6 +44,12 @@ int main()
 }
 ```
 
+3. Type in terminal:
+```sh
+$ g++ -lOpenCL -fopenmp -o a.out main.cpp
+$ ./a.out
+```
+
 Output:
 ```sh
 (2, 2, 2)
@@ -54,6 +66,12 @@ Output:
 ```
 
 ## Example (GPU)
+1. Copy these headers to your project folder:
+- `MatrixCF.hpp`
+- `EasyCL.hpp`
+- `json.hpp`
+
+2. Create `main.cpp`:
 ```c++
 #include <iostream>
 #include "MatrixCF.hpp"
@@ -91,6 +109,12 @@ int main()
     
     return 0;
 }
+```
+
+3. Type in terminal:
+```sh
+$ g++ -lOpenCL -fopenmp -o a.out main.cpp
+$ ./a.out
 ```
 
 Output:
