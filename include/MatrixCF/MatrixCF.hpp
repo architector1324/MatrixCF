@@ -43,6 +43,7 @@ namespace mcf{
         std::string getTypeName() const;
         void requireMatrixShape(const Mat<T>&, std::size_t, std::size_t, const std::string&, bool is_result = false) const;
         void requireMatrixH(std::size_t, std::size_t, const std::string&) const;
+        void requireMatrixW(std::size_t, std::size_t, const std::string&) const;
         void requireTotalSize(const Mat<T>&, std::size_t, const std::string&) const;
 
 		void copy(const Mat<T>&);
@@ -118,8 +119,12 @@ namespace mcf{
         void hstack(const Mat<T>&, const Mat<T>&);
         void hstack(const Mat<T>&, const Mat<T>&, ecl::Computer&, ecl::EXEC sync = SYNC);
 
+        void hstack(const std::vector<const Mat<T>*>&);
+        
         void vstack(const Mat<T>&, const Mat<T>&);
         void vstack(const Mat<T>&, const Mat<T>&, ecl::Computer&, ecl::EXEC sync = SYNC);
+
+        void vstack(const std::vector<const Mat<T>*>&);
 
         void cpy(const Mat<T>&);
         void view(Mat<T>&);
@@ -217,6 +222,15 @@ void mcf::Mat<T>::requireMatrixH(std::size_t r_h, std::size_t require_h, const s
         std::string e = "Require h [" + where + "]: ";
         e += "wrong matrix h ";
         e += std::to_string(r_h) + " != " + std::to_string(require_h);
+        throw std::runtime_error(e);
+    }
+}
+template<typename T>
+void mcf::Mat<T>::requireMatrixW(std::size_t r_w, std::size_t require_w, const std::string& where) const{
+    if(r_w != require_w){
+        std::string e = "Require w [" + where + "]: ";
+        e += "wrong matrix w ";
+        e += std::to_string(r_w) + " != " + std::to_string(require_w);
         throw std::runtime_error(e);
     }
 }
@@ -583,6 +597,7 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B){
         }
     }
 }
+
 template<typename T>
 void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video, ecl::EXEC sync){
     std::string type = getTypeName();
@@ -606,6 +621,35 @@ void mcf::Mat<T>::hstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video,
 
     ecl::Frame frame = {cacheProgram(prog), hstack, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
+}
+
+template<typename T>
+void mcf::Mat<T>::hstack(const std::vector<const mcf::Mat<T>*>& vec){
+    size_t total_h = vec[0]->getH();
+    size_t total_w = 0;
+
+    for(auto* m : vec){
+        requireMatrixH(total_h, m->getH(), "hstack");
+        total_w += m->getW();
+    }
+    requireMatrixShape(*this, total_h, total_w, "hstack", true);
+
+	#ifdef MATRIXCF_USE_OPENMP
+	#pragma omp parallel for
+	#endif
+    for(std::size_t i = 0; h > i; i++){
+        const auto* curr = vec[0];
+        size_t index = 0;
+        size_t offset = 0;
+        for(std::size_t j = 0; w > j; j++){
+            if(curr->w + offset <= j) {
+                index++;
+                offset += curr->getW();
+                curr = vec[index];
+            }
+            setE(curr->getE(i, j - offset), i, j);
+        }
+    }
 }
 
 template<typename T>
@@ -647,6 +691,35 @@ void mcf::Mat<T>::vstack(const Mat<T>& A, const Mat<T>& B, ecl::Computer& video,
 
     ecl::Frame frame = {cacheProgram(prog), vstack, {&A.arr, &B.arr, &arr}};
     video.grid(frame, {h, w}, sync);
+}
+
+template<typename T>
+void mcf::Mat<T>::vstack(const std::vector<const mcf::Mat<T>*>& vec){
+    size_t total_h = 0;
+    size_t total_w = vec[0]->getW();
+
+    for(auto* m : vec){
+        requireMatrixW(total_w, m->getW(), "vstack");
+        total_h += m->getH();
+    }
+    requireMatrixShape(*this, total_h, total_w, "vstack", true);
+
+	#ifdef MATRIXCF_USE_OPENMP
+	#pragma omp parallel for
+	#endif
+    for(std::size_t j = 0; w > j; j++){
+        const auto* curr = vec[0];
+        size_t index = 0;
+        size_t offset = 0;
+        for(std::size_t i = 0; h > i; i++){
+            if(curr->h + offset <= i) {
+                index++;
+                offset += curr->getH();
+                curr = vec[index];
+            }
+            setE(curr->getE(i - offset, j), i, j);
+        }
+    }
 }
 
 template<typename T>

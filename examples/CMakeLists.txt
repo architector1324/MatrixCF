@@ -1,5 +1,7 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 3.7...3.13)
 
+matrixcf_add_example(hstack_multiple hstack_multiple.cpp)
+matrixcf_add_example(vstack_multiple vstack_multiple.cpp)
 matrixcf_add_example(serialization serialization.cpp)
 matrixcf_add_example(full_reduce full_reduce.cpp)
 matrixcf_add_example(mul_value mul_value.cpp)
