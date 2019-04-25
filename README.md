@@ -46,7 +46,7 @@ int main()
 
 3. Type in terminal:
 ```sh
-$ g++ -lOpenCL -fopenmp -o a.out main.cpp
+$ g++ -std=c++17 -lOpenCL -fopenmp -o a.out main.cpp
 $ ./a.out
 ```
 
@@ -113,7 +113,7 @@ int main()
 
 3. Type in terminal:
 ```sh
-$ g++ -lOpenCL -fopenmp -o a.out main.cpp
+$ g++ -std=c++17 -lOpenCL -fopenmp -o a.out main.cpp
 $ ./a.out
 ```
 
